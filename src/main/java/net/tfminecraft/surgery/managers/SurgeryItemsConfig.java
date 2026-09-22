@@ -1,4 +1,4 @@
-package tfmc.justin.managers;
+package net.tfminecraft.surgery.managers;
 
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;

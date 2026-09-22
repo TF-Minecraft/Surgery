@@ -1,13 +1,13 @@
-package tfmc.justin;
+package net.tfminecraft.surgery;
 
 import org.bukkit.entity.Player;
 import org.bukkit.event.HandlerList;
 import org.bukkit.plugin.java.JavaPlugin;
-import tfmc.justin.managers.SurgeryItemsConfig;
-import tfmc.justin.managers.SurgeryMenuHolder;
-import tfmc.justin.managers.SurgeryMenuManager;
-import tfmc.justin.listeners.PlayerListener;
-import tfmc.justin.commands.SurgeryCommand;
+import net.tfminecraft.surgery.managers.SurgeryItemsConfig;
+import net.tfminecraft.surgery.managers.SurgeryMenuHolder;
+import net.tfminecraft.surgery.managers.SurgeryMenuManager;
+import net.tfminecraft.surgery.listeners.PlayerListener;
+import net.tfminecraft.surgery.commands.SurgeryCommand;
 
 public class SurgeryPlugin extends JavaPlugin {
 

@@ -1,6 +1,6 @@
-package tfmc.justin.managers;
+package net.tfminecraft.surgery.managers;
 
-import me.Plugins.TLibs.Objects.API.ItemAPI;
+import net.tfminecraft.tlibs.objects.api.ItemAPI;
 import org.bukkit.ChatColor;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;

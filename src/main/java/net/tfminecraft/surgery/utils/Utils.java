@@ -1,4 +1,4 @@
-package tfmc.justin.utils;
+package net.tfminecraft.surgery.utils;
 
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
