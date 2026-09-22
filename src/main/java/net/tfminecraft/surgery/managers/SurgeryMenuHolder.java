@@ -13,6 +13,8 @@ public class SurgeryMenuHolder implements InventoryHolder {
 
     private final Inventory inventory;
 
+    // Keep the existing legacy text representation, formatting, and exact-string comparisons.
+    @SuppressWarnings("deprecation")
     public SurgeryMenuHolder() {
         this.inventory = Bukkit.createInventory(this, 54, "Surgery Menu");
     }

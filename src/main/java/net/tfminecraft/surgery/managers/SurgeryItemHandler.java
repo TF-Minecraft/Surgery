@@ -84,6 +84,8 @@ public class SurgeryItemHandler {
     // ==============================================
     // Handles clicking on a surgery menu item
     // ==============================================
+    // Keep the existing legacy text representation, formatting, and exact-string comparisons.
+    @SuppressWarnings("deprecation")
     public void handleItemClick(Player player, ItemStack clickedItem, int slot) {
         if (clickedItem == null || clickedItem.getType().isAir()) {
             return;
@@ -135,6 +137,8 @@ public class SurgeryItemHandler {
     // ==============================================
     // Updates the menu when specific items are clicked
     // ==============================================
+    // Keep the existing legacy text representation, formatting, and exact-string comparisons.
+    @SuppressWarnings("deprecation")
     private void updateMenu(Player player, int clickedSlot) {
         Inventory menu = player.getOpenInventory().getTopInventory();
         UUID playerId = player.getUniqueId();
@@ -209,6 +213,8 @@ public class SurgeryItemHandler {
     // ==============================================
     // Ultrasound functionality: reveals diagnosis and sets temperature for flu diagnoses
     // ==============================================
+    // Keep the existing legacy text representation, formatting, and exact-string comparisons.
+    @SuppressWarnings("deprecation")
     private String handleUltrasound(Player player, Inventory menu, UUID playerId, boolean skillFail) {
         if (skillFail) {
             return getRandomSkillFail(skillFailUltrasound);

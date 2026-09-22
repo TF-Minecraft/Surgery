@@ -81,6 +81,8 @@ public class SurgeryMenuBuilder {
     // ==============================================
     // Initializes player state when opening menu
     // ==============================================
+    // Keep the existing legacy text representation, formatting, and exact-string comparisons.
+    @SuppressWarnings("deprecation")
     private void initializePlayerState(Player player, Inventory menu) {
         UUID playerId = player.getUniqueId();
         
