@@ -1,40 +1,24 @@
-# surgery
+# Surgery
 
-Technical documentation is maintained in [TF-Minecraft/Docs](https://github.com/TF-Minecraft/Docs/blob/main/projects/Surgery/README.md).
+> A hands-on medical roleplay minigame for TF-Minecraft.
 
-Use that project index for setup, configuration, architecture, integration and testing guides. This repository contains the source and project-specific assets.
+Surgery puts a player's treatment into another player's hands. A nearby patient becomes the subject of an interactive operating-table menu, where the surgeon diagnoses the problem, chooses tools, and manages the patient's changing condition.
 
-## TLibs build dependency
+Each move matters: opening an incision, cleaning the site, treating a complication, or closing the wound can change what the surgeon needs to do next.
 
-TLibs is a versioned Maven `provided` dependency. From this repository, prepare
-it once with the shared installer, then build as usual:
+## Features
 
-```sh
-python3 ../tlibs/tools/install-dependency.py --pom pom.xml
-mvn clean verify
-```
+- **Interactive operations** — an inventory menu brings surgical tools and patient status together in one view.
+- **Hidden diagnoses** — ultrasound reveals ailments ranging from broken bones and infections to fantastical conditions.
+- **Purposeful instruments** — tools include scalpels, anesthetic, sponges, stitches, transfusions, and a defibrillator.
+- **Changing patient vitals** — consciousness, pulse, temperature, bleeding, and cleanliness affect the course of treatment.
+- **Diagnosis-specific challenges** — different ailments require different interventions, including bone repairs and temperature management.
+- **Consequences for each move** — failed actions and worsening complications create pressure to finish treatment before the operation fails.
 
-See [TLibs dependency setup](https://github.com/TF-Minecraft/TLibs/blob/5da8e77d0e0696bbff7d7064a2644072da9c6428/DEPENDENCIES.md)
-for public release installation, offline builds and rollback.
-Other declared build dependencies still need their usual preparation.
+Originally created by [Justinas Launikonis](https://github.com/JustinasLa).
 
-Builds and server runtime require Java 25. Local builds default to [TLibs 1.1.0](https://github.com/TF-Minecraft/TLibs/releases/tag/v1.1.0); CI resolves the latest published stable TLibs release for each build, verifies its checksum, and uses its exact version throughout that job.
+## Documentation
 
-## Shared plugin dependencies
+[Project documentation](https://github.com/TF-Minecraft/Docs/blob/main/projects/Surgery/README.md)
 
-Build and release workflows install checksum-verified plugin releases through
-[TLibs' shared installer](https://github.com/TF-Minecraft/TLibs/blob/main/DEPENDENCIES.md).
-CI selects the latest published versions; local builds use the explicit Maven
-version properties. Shared plugins use `provided` scope and remain separate
-server plugins. Each build records exact versions and checksums in
-`.build/plugin-dependencies.json` alongside its JAR.
-
-From this checkout, with the TLibs repository next to it:
-
-```sh
-python3 ../tlibs/tools/install-plugins.py --pom pom.xml
-```
-
-Prepare any remaining third-party inputs with `.github/scripts/prepare-release.sh`
-before running Maven. Any source-unavailable inputs remain private and checksum-pinned wherever declared; see the installer
-documentation for authentication and reproducible rebuilds.
+Technical documentation is maintained in [TF-Minecraft/Docs](https://github.com/TF-Minecraft/Docs).
