@@ -1,6 +1,5 @@
 package net.tfminecraft.surgery.managers;
 
-import net.tfminecraft.tlibs.enums.APIType;
 import net.tfminecraft.tlibs.objects.api.ItemAPI;
 import net.tfminecraft.tlibs.TLibs;
 import org.bukkit.entity.Player;
@@ -36,7 +35,7 @@ public class SurgeryMenuManager {
     // ==============================================
     public void initialize() {
         plugin.getLogger().info("[Surgery] Loading TLibs API...");
-        api = (ItemAPI) TLibs.getApiInstance(APIType.ITEM_API);
+        api = TLibs.getItemAPI();
         if (api == null) {
             plugin.getLogger().severe("[Surgery] TLibs ItemAPI is unavailable - disabling plugin.");
             plugin.getServer().getPluginManager().disablePlugin(plugin);

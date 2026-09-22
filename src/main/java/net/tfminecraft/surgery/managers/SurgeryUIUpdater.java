@@ -44,6 +44,8 @@ public class SurgeryUIUpdater {
     // ==============================================
     // Creates an info block with material, name, and description
     // ==============================================
+    // Keep the existing legacy text representation, formatting, and exact-string comparisons.
+    @SuppressWarnings("deprecation")
     public ItemStack createInfoBlock(Material material, String name, String description) {
         ItemStack block = new ItemStack(material);
         ItemMeta meta = block.getItemMeta();
@@ -58,6 +60,8 @@ public class SurgeryUIUpdater {
     // ==============================================
     // Creates an info block with material, name, and lore list
     // ==============================================
+    // Keep the existing legacy text representation, formatting, and exact-string comparisons.
+    @SuppressWarnings("deprecation")
     public ItemStack createInfoBlock(Material material, String name, java.util.List<String> lore) {
         ItemStack block = new ItemStack(material);
         ItemMeta meta = block.getItemMeta();
@@ -72,6 +76,8 @@ public class SurgeryUIUpdater {
     // ==============================================
     // Updates the incision block
     // ==============================================
+    // Keep the existing legacy text representation, formatting, and exact-string comparisons.
+    @SuppressWarnings("deprecation")
     public void updateIncisionBlock(Inventory menu, UUID playerId, int incisions) {
         Material incisionColor = SurgeryConstants.getIncisionColor(incisions);
         ItemStack incisionBlock = createInfoBlock(incisionColor, ChatColor.GOLD + "Incisions", ChatColor.GRAY + String.valueOf(incisions));
@@ -81,6 +87,8 @@ public class SurgeryUIUpdater {
     // ==============================================
     // Updates the temperature block
     // ==============================================
+    // Keep the existing legacy text representation, formatting, and exact-string comparisons.
+    @SuppressWarnings("deprecation")
     public void updateTemperatureBlock(Inventory menu, UUID playerId, double temp) {
         Material tempColor = SurgeryConstants.getTemperatureColor(temp);
         String tempDisplay = SurgeryConstants.formatTemperature(temp);
@@ -91,6 +99,8 @@ public class SurgeryUIUpdater {
     // ==============================================
     // Updates the operation site block
     // ==============================================
+    // Keep the existing legacy text representation, formatting, and exact-string comparisons.
+    @SuppressWarnings("deprecation")
     public void updateOperationSiteBlock(Inventory menu, UUID playerId, String status) {
         Material siteColor = SurgeryConstants.getOperationSiteColor(status);
         ItemStack siteBlock = createInfoBlock(siteColor, ChatColor.GOLD + "Operation Site", ChatColor.GRAY + status);
@@ -100,6 +110,8 @@ public class SurgeryUIUpdater {
     // ==============================================
     // Updates the status block
     // ==============================================
+    // Keep the existing legacy text representation, formatting, and exact-string comparisons.
+    @SuppressWarnings("deprecation")
     public void updateStatusBlock(Inventory menu, UUID playerId, String status) {
         Material statusColor = SurgeryConstants.getStatusColor(status);
         ItemStack statusBlock = createInfoBlock(statusColor, ChatColor.GOLD + "Status", ChatColor.GRAY + status);
@@ -109,6 +121,8 @@ public class SurgeryUIUpdater {
     // ==============================================
     // Updates the pulse block
     // ==============================================
+    // Keep the existing legacy text representation, formatting, and exact-string comparisons.
+    @SuppressWarnings("deprecation")
     public void updatePulseBlock(Inventory menu, UUID playerId, String pulse) {
         Material pulseColor = SurgeryConstants.getPulseColor(pulse);
         ItemStack pulseBlock = createInfoBlock(pulseColor, ChatColor.GOLD + "Pulse", ChatColor.GRAY + pulse);
@@ -118,6 +132,8 @@ public class SurgeryUIUpdater {
     // ==============================================
     // Updates the diagnosis block
     // ==============================================
+    // Keep the existing legacy text representation, formatting, and exact-string comparisons.
+    @SuppressWarnings("deprecation")
     public void updateDiagnosisBlock(Inventory menu, UUID playerId) {
         String diagnosis = stateManager.getDiagnosis(playerId);
         boolean cured = stateManager.isCured(playerId);
@@ -149,6 +165,8 @@ public class SurgeryUIUpdater {
     // ==============================================
     // Sends a numbered message to the player
     // ==============================================
+    // Keep the existing legacy text representation, formatting, and exact-string comparisons.
+    @SuppressWarnings("deprecation")
     public void sendNumberedMessage(Player player, String message) {
         UUID playerId = player.getUniqueId();
         int moveNumber = stateManager.getMoveCount(playerId) + 1;
@@ -159,6 +177,8 @@ public class SurgeryUIUpdater {
     // ==============================================
     // Gets a message from messages.yml and translates color codes
     // ==============================================
+    // Keep the existing legacy text representation, formatting, and exact-string comparisons.
+    @SuppressWarnings("deprecation")
     public String getMessage(String path) {
         return ChatColor.translateAlternateColorCodes('&', messages.getString(path, ""));
     }
@@ -166,6 +186,8 @@ public class SurgeryUIUpdater {
     // ==============================================
     // Gets a message with a fallback default, translating color codes
     // ==============================================
+    // Keep the existing legacy text representation, formatting, and exact-string comparisons.
+    @SuppressWarnings("deprecation")
     public String getMessage(String path, String def) {
         return ChatColor.translateAlternateColorCodes('&', messages.getString(path, def));
     }
