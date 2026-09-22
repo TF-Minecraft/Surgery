@@ -2,7 +2,7 @@ main: tfmc.justin.SurgeryPlugin
 version: ${project.version}
 name: surgery
 author: Justin
-api-version: 1.21
+api-version: '1.21.10'
 depend: [TLibs]
 
 commands:
