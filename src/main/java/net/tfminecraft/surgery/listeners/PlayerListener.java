@@ -1,4 +1,4 @@
-package tfmc.justin.listeners;
+package net.tfminecraft.surgery.listeners;
 
 import org.bukkit.entity.Player;
 import org.bukkit.event.Listener;
@@ -8,7 +8,7 @@ import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.inventory.InventoryCloseEvent;
 import org.bukkit.event.inventory.InventoryDragEvent;
 import org.bukkit.inventory.ItemStack;
-import tfmc.justin.managers.SurgeryMenuManager;
+import net.tfminecraft.surgery.managers.SurgeryMenuManager;
 
 public class PlayerListener implements Listener {
 

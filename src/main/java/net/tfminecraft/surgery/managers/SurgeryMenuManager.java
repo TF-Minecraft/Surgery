@@ -1,8 +1,8 @@
-package tfmc.justin.managers;
+package net.tfminecraft.surgery.managers;
 
-import me.Plugins.TLibs.Enums.APIType;
-import me.Plugins.TLibs.Objects.API.ItemAPI;
-import me.Plugins.TLibs.TLibs;
+import net.tfminecraft.tlibs.enums.APIType;
+import net.tfminecraft.tlibs.objects.api.ItemAPI;
+import net.tfminecraft.tlibs.TLibs;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.plugin.java.JavaPlugin;

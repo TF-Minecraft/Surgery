@@ -1,4 +1,4 @@
-package tfmc.justin.managers;
+package net.tfminecraft.surgery.managers;
 
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;

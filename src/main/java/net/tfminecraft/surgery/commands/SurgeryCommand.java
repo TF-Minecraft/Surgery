@@ -1,13 +1,13 @@
-package tfmc.justin.commands;
+package net.tfminecraft.surgery.commands;
 
 import org.bukkit.Bukkit;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
-import tfmc.justin.managers.SurgeryMenuManager;
-import tfmc.justin.managers.SurgeryUIUpdater;
-import tfmc.justin.SurgeryPlugin;
+import net.tfminecraft.surgery.managers.SurgeryMenuManager;
+import net.tfminecraft.surgery.managers.SurgeryUIUpdater;
+import net.tfminecraft.surgery.SurgeryPlugin;
 
 public class SurgeryCommand implements CommandExecutor {
 

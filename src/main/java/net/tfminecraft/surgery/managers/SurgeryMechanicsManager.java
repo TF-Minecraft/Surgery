@@ -1,6 +1,6 @@
-package tfmc.justin.managers;
+package net.tfminecraft.surgery.managers;
 
-import me.Plugins.TLibs.Objects.API.ItemAPI;
+import net.tfminecraft.tlibs.objects.api.ItemAPI;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.Inventory;

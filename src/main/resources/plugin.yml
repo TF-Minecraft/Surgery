@@ -1,4 +1,4 @@
-main: tfmc.justin.SurgeryPlugin
+main: net.tfminecraft.surgery.SurgeryPlugin
 version: ${project.version}
 name: surgery
 author: Justin
