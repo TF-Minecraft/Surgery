@@ -2,7 +2,7 @@
 # This file contains all text displayed to players
 
 # Command Messages
-command-usage: "&cUsage: /surgery <player_name>"
+command-usage: "&cUsage: /surgery <player> | accept | deny"
 command-player-not-found: "&cPlayer not found or not online!"
 command-too-far: "&cThe patient must be within %distance% blocks of you!"
 command-console: "&cThis command can only be used by players."
@@ -10,62 +10,78 @@ command-self-surgery: "&cYou cannot perform surgery on yourself!"
 command-already-in-surgery: "&cYou are already performing surgery! Close the current menu first."
 command-patient-in-surgery: "&cThat player is already undergoing surgery!"
 command-patient-is-operating: "&cThat player is busy performing surgery themselves!"
+command-no-permission: "&cOnly a trained &6Physician &ccan perform surgery."
+command-no-ailment: "&e%patient% has no ailment that surgery can treat."
+
+# Consent
+request-sent: "&7You offered to operate on &f%patient%&7's &f%ailment%&7. Waiting for them to accept..."
+request-already-pending: "&c%patient% already has a surgery offer waiting. They need to accept or deny it first."
+request-received: "&6Dr. %surgeon% &eoffers to operate on your &f%ailment% &e(&f%remaining%&e left to heal). &7If the surgery fails, it will take &c%extra% &7longer to heal. This offer expires in %seconds%s."
+request-accept-button: "&a&l[Accept]"
+request-deny-button: "&c&l[Deny]"
+request-none: "&cYou have no surgery offer to answer."
+request-surgeon-gone: "&cThe physician is no longer available."
+request-cannot-start: "&cDr. %surgeon% cannot begin the surgery right now."
+request-ailment-gone: "&eThat ailment has already healed."
+request-accepted-patient: "&aYou lie down on the table. Dr. %surgeon% begins the operation."
+request-accepted-surgeon: "&a%patient% has agreed to the operation."
+request-denied-patient: "&7You declined the operation."
+request-denied-surgeon: "&c%patient% declined the operation."
 
 # Item Errors
-item-not-in-inventory: "&cYou don't have this item in your inventory!"
+item-not-in-inventory: "&cYou don't have this instrument in your inventory!"
 
 # Success/Failure Messages
 surgery-successful: "&6Surgery Successful!"
-surgery-successful-subtitle: "&aYou have successfully treated the patient!"
+surgery-successful-subtitle: "&aYou have mended %patient%'s %ailment%!"
+patient-surgery-successful: "&aDr. %surgeon% has mended your %ailment%."
 surgery-failed: "&cSurgery Failed!"
+surgery-failed-penalty: "&7The patient's recovery will take &c%extra% &7longer."
+patient-surgery-failed: "&cThe surgery failed. Your %ailment% will take %extra% longer to heal (%remaining% left)."
+surgery-cancelled: "&7You set down your instruments before operating. No harm done."
+ailment-already-healed: "&eThe patient's %ailment% had already healed by the time you finished."
 
 # Failure Reasons
-failure-not-resuscitated: "&cThe patient was not resuscitated in time."
-failure-stabbed-awake: "&cYou just stabbed someone who was fully awake!"
+failure-not-resuscitated: "&cThe patient could not be revived in time."
+failure-stabbed-awake: "&cYou cut into a patient who was wide awake!"
 failure-bled-out: "&cThe patient has bled out!"
 failure-infection: "&cThe patient has succumbed to infection."
-failure-gave-up: "&cYou couldn't save them!"
-failure-anesthetic-misuse: "&cYou put the patient to sleep. Permanently."
-failure-weak-pulse: "&cThe patient's heart has stopped beating."
-failure-no-diagnosis: "&cYou cut into the patient without knowing what was wrong!"
-failure-high-fever: "&cThe patient died from severe hyperthermia!"
+failure-gave-up: "&cYou abandoned the patient mid-operation!"
+failure-anesthetic-misuse: "&cToo much chloroform. The patient will not wake."
+failure-weak-pulse: "&cThe patient's heart has given out."
+failure-high-fever: "&cThe patient burned up with fever!"
 failure-patient-left: "&cThe patient is no longer on the operating table!"
 
 # Progress Messages
 bleeding-warning: "&cIt's becoming hard to see..."
-wounds-examined: "&aYou have examined the wounds"
-temperature-reduced: "&aTemperature reduced by 3°C!"
-operation-clean: "&aOperation site is clean. Temperature will not rise."
+examined: "&aExamination complete: &f%procedure%&a. Make %incisions% incision(s) to reach it."
+temperature-reduced: "&aThe tincture brings the fever down."
+operation-clean: "&aCarbolic acid has cleaned the site. The fever will not rise."
 vision-cleared: "&aVision cleared! Skill fail chance reduced for next move."
-condition-treated-incomplete: "&eCondition treated, but surgery not yet complete."
+condition-treated-incomplete: "&eThe ailment is dressed, but the surgery is not yet complete."
 check-remaining: "&eCheck: bones, incisions, bleeding, temperature, status"
-surgical-glove-ready: "&aSurgical Glove is ready - you can fix the problem now!"
+dressing-ready: "&aThe injury is set - apply the linen dressing!"
 
 # Discovery Messages
-discovered-broken-bone: "&eYou discovered a broken bone!"
-discovered-shattered-bone: "&eYou discovered a shattered bone!"
+discovered-broken-bone: "&eThe incision reveals a broken bone!"
+discovered-shattered-bone: "&eThe incision reveals a shattered bone!"
 
 # Tool Availability Messages
-defibrillator-available: "&cDefibrillator is now available!"
-pins-available: "&eSurgical Pins are now available!"
-splint-available: "&eSurgical Splint is now available!"
-clamp-available: "&cSurgical Clamp is now available!"
+smelling-salts-available: "&cThe patient has collapsed - reach for the smelling salts!"
+silver-wire-available: "&eSilver wire is ready to bind the shattered bone!"
+splint-available: "&eA splint is ready to set the broken bone!"
+artery-forceps-available: "&cArtery forceps are ready to stop the bleeding!"
 
 # Status Change Messages
 pulse-weakening: "&cBlood loss is weakening the patient's pulse!"
-protection-lost: "&cOperation site contaminated! Temperature protection lost."
-patient-coming-to: "&eThe anesthetic is wearing off - the patient is coming to!"
-patient-woke-up: "&cThe patient is fully awake! Re-administer anesthetic before cutting!"
+protection-lost: "&cOperation site contaminated! The carbolic acid no longer protects it."
+patient-coming-to: "&eThe chloroform is wearing off - the patient is coming to!"
+patient-woke-up: "&cThe patient is fully awake! Give more chloroform before cutting!"
 
-# Diagnosis-Specific Messages
-moldy-guts: "&4The patient's guts burst making it impossible to see anything!"
-fatty-liver-heart-stop: "&4The fat build up has caused the patient's heart to stop!"
-broken-heart-stop: "&4The patient's heart breaks!"
-chaos-temp-spike: "&cArcane energy causes temperature spike!"
-chaos-temp-drop: "&bArcane energy causes temperature drop!"
-chaos-heart-stop: "&4Arcane energy stops the heart!"
-chaos-status-change: "&eArcane energy changes patient status!"
-lupus-howl: "&4The patient howls, causing an incision and bleeding!"
+# Complication Messages
+haemorrhage: "&4The wound haemorrhages, blood pours over everything!"
+shock-collapse: "&4The patient goes grey and collapses from shock!"
+sepsis-found: "&cThe wound is septic - the patient is burning with fever!"
 
 # Skill Fail Messages (Sponge - slot 28)
 skill-fail-sponge:
@@ -101,158 +117,113 @@ skill-fail-scalpel:
   - "The lighting made you misjudge."
   - "You sneezed while cutting."
 
-# Skill Fail Messages (Stitches - slot 30)
-skill-fail-stitches:
-  - "You somehow tied yourself up in stitches."
-  - "The suture snapped!"
+# Skill Fail Messages (Catgut Suture - slot 30)
+skill-fail-suture:
+  - "You somehow tied yourself up in catgut."
+  - "The catgut snapped!"
   - "You tied the knot wrong."
   - "The stitches are too loose."
-  - "You poked yourself with the needle."
+  - "You pricked your finger on the needle."
   - "The thread tangled."
   - "You made uneven stitches."
-  - "The needle bent."
+  - "The curved needle bent."
   - "You lost count of the stitches."
-  - "The suture pulled through."
-  - "You stitched skin to glove."
+  - "The catgut pulled through the skin."
+  - "You stitched the wound to your cuff."
   - "The knot came undone."
-  - "You used the wrong stitch pattern."
-  - "The thread broke mid-stitch."
+  - "The catgut had dried out and cracked."
 
-# Skill Fail Messages (Antibiotics - slot 31)
-skill-fail-antibiotics:
-  - "This is the wrong medication! The bacteria like it."
-  - "You gave the wrong dosage!"
-  - "The antibiotics are expired!"
-  - "You mixed incompatible drugs!"
-  - "You gave it via the wrong route!"
-  - "The patient is allergic!"
+# Skill Fail Messages (Willow-Bark Tincture - slot 31)
+skill-fail-tincture:
+  - "You poured the tincture down the wrong pipe."
+  - "You gave a whole bottle instead of a spoonful!"
+  - "The tincture had turned sour."
+  - "You grabbed the laudanum by mistake!"
+  - "The patient spat it back out."
   - "You dropped the vial!"
-  - "The antibiotics crystallized!"
-  - "You confused the labels, gave the patient Fentanyl instead!"
-  - "The medication was contaminated!"
-  - "You gave it too quickly!"
-  - "The IV line infiltrated!"
-  - "You used the wrong antibiotic!"
-  - "The patient vomited it up!"
+  - "The tincture was mostly gin."
+  - "You confused the labels and gave cod liver oil."
+  - "The dose was far too weak."
+  - "The patient choked on it."
 
-# Skill Fail Messages (Antiseptic - slot 32)
-skill-fail-antiseptic:
-  - "You spilled antiseptic on your shoes. They are very clean now."
-  - "The antiseptic evaporated!"
-  - "You used expired antiseptic!"
-  - "You sprayed it in your eyes!"
-  - "The bottle was empty!"
-  - "You grabbed the wrong solution!"
-  - "It spilled on the floor!"
-  - "The antiseptic is contaminated!"
-  - "You forgot to let it dry!"
-  - "You wiped it off too soon!"
-  - "You mixed it with the wrong solution!"
-  - "The spray nozzle broke!"
-  - "You used too much!"
-  - "You missed the target area!"
+# Skill Fail Messages (Carbolic Acid - slot 32)
+skill-fail-carbolic-acid:
+  - "You splashed carbolic acid on your boots. They are very clean now."
+  - "The carbolic spray sputtered and died."
+  - "The bottle was nearly empty!"
+  - "The fumes made your eyes stream."
+  - "You grabbed the vinegar instead!"
+  - "It spilled across the floor!"
+  - "You diluted it far too much."
+  - "You wiped it off before it could work."
+  - "The spray pump jammed."
+  - "You burned your fingers on the neat acid."
 
-# Skill Fail Messages (Surgical Glove/Fix It - slot 33)
-skill-fail-surgical-glove:
-  - "You screwed it up! Try again."
-  - "Your glove tore!"
-  - "You contaminated the glove!"
-  - "The glove is inside-out!"
-  - "You grabbed the wrong size!"
-  - "The glove has a hole!"
-  - "You double-gloved wrong!"
-  - "The powder caused a reaction!"
-  - "You can't feel anything!"
-  - "The glove doesn't fit you must acquit!"
-  - "You dropped a tool!"
-  - "Your hand is sweating profusely!"
-  - "The glove got stuck!"
-  - "You used a latex glove on an allergic patient!"
+# Skill Fail Messages (Linen Dressing - slot 33)
+skill-fail-dressing:
+  - "You wrapped the dressing far too tight."
+  - "The linen unravelled in your hands."
+  - "You dropped the dressing on the floor."
+  - "The lint was filthy."
+  - "You bandaged the wrong side."
+  - "The dressing slipped straight off."
+  - "You ran out of linen halfway."
+  - "You tied the bandage to the table."
 
-# Skill Fail Messages (Ultrasound - slot 34)
-skill-fail-ultrasound:
-  - "You scanned the nurse with your ultrasound!"
-  - "The screen is showing static."
-  - "You dropped the ultrasound probe."
-  - "The gel bottle exploded everywhere."
-  - "You scanned yourself by mistake."
-  - "The machine is showing error codes."
-  - "You forgot to turn it on."
-  - "The image is too blurry to read."
-  - "You scanned the wrong area."
-  - "The battery died mid-scan."
-  - "You interpreted the results backwards."
-  - "The probe slipped out of your hands."
-  - "You spilled ultrasound gel everywhere."
-  - "The machine made a terrible noise."
+# Skill Fail Messages (Stethoscope - slot 34)
+skill-fail-stethoscope:
+  - "You listened through the wrong end of the stethoscope."
+  - "All you can hear is your own heartbeat."
+  - "The nurse coughed at the worst moment."
+  - "You pressed it to the patient's elbow."
+  - "The wooden tube has a crack in it."
+  - "You dropped the stethoscope under the table."
+  - "The patient's snoring drowns everything out."
+  - "You forgot what a healthy chest sounds like."
 
-# Skill Fail Messages (Lab Kit - slot 37)
-skill-fail-lab-kit:
-  - "You contaminated the sample."
-  - "You spilled the lab kit everywhere."
-  - "The test results are inconclusive."
-  - "You mixed up the samples."
-  - "The equipment malfunctioned."
-  - "You dropped the sample on the floor."
-  - "The reagents expired."
-  - "You forgot to calibrate the machine."
-  - "The sample was too small."
-  - "You contaminated the work area."
-  - "The centrifuge broke."
-  - "You used the wrong test."
-  - "The sample coagulated."
-  - "You spilled blood on the paperwork."
+# Skill Fail Messages (Clinical Thermometer - slot 37)
+skill-fail-thermometer:
+  - "The thermometer slipped and shattered."
+  - "You read it upside down."
+  - "The mercury refuses to move."
+  - "You took your own temperature by mistake."
+  - "The patient bit through the glass!"
+  - "You forgot to shake it down first."
+  - "The markings have worn away."
+  - "You left it in the tea."
 
-# Skill Fail Messages (Anesthetic - slot 38)
-skill-fail-anesthetic:
-  - "You end up inhaling all the anesthetic yourself. You feel woozy."
-  - "You gave too much!"
-  - "The patient is under-anesthetized!"
-  - "You forgot to check allergies!"
-  - "The gas mask leaked!"
-  - "You mixed the wrong gases!"
-  - "The ventilator failed!"
-  - "Anesthesia awareness!"
-  - "The patient isn't breathing!"
-  - "You gave it in the wrong vein!"
-  - "The oxygen tank is empty!"
-  - "You dropped the mask!"
-  - "The dosage calculator was wrong!"
-  - "The patient woke up mid-surgery!"
+# Skill Fail Messages (Chloroform - slot 38)
+skill-fail-chloroform:
+  - "You breathed in the chloroform yourself. You feel woozy."
+  - "The cloth dried out before it reached the patient."
+  - "You spilled the chloroform on the floor."
+  - "Not nearly enough drops!"
+  - "The patient held their breath."
+  - "The bottle's stopper is stuck fast."
+  - "The patient struggled free of the cloth."
+  - "The nurse fainted from the fumes."
 
-# Skill Fail Messages (Defibrillator - slot 39)
-skill-fail-defibrillator:
-  - "You electrocuted yourself!"
-  - "The pads weren't attached!"
-  - "You shocked at the wrong time!"
-  - "The battery is dead!"
-  - "You forgot to yell 'Clear'!"
-  - "The machine malfunctioned!"
-  - "You used too much power!"
-  - "The gel dried out!"
-  - "You placed the pads backwards!"
-  - "The defib didn't charge!"
-  - "You shocked yourself instead!"
-  - "The cables came loose!"
-  - "You delivered it during a pulse!"
-  - "The pads slipped off!"
+# Skill Fail Messages (Smelling Salts - slot 39)
+skill-fail-smelling-salts:
+  - "You took a whiff yourself and reeled back!"
+  - "The salts have lost their pungency."
+  - "You couldn't unscrew the cap."
+  - "You held it under the patient's chin, not their nose."
+  - "The vial slipped from your fingers."
+  - "The patient barely stirs."
+  - "You waved it far too far away."
+  - "The crystals spilled everywhere."
 
-# Skill Fail Messages (Pins - slot 40)
-skill-fail-pins:
-  - "You jabbed the pin through the artery!"
-  - "The pin bent!"
-  - "You hammered too hard!"
-  - "The pin went in crooked!"
-  - "You missed the bone!"
-  - "The pin is too short!"
-  - "You used the wrong size!"
-  - "The pin broke!"
-  - "You hit your thumb!"
-  - "The alignment is wrong!"
-  - "You drove it too deep!"
-  - "The pin won't grip!"
-  - "You fractured the bone more!"
-  - "The pin fell out!"
+# Skill Fail Messages (Silver Wire - slot 40)
+skill-fail-silver-wire:
+  - "The wire snapped as you twisted it!"
+  - "You drilled straight through the bone."
+  - "The wire slipped off the fragment."
+  - "You wired the wrong pieces together."
+  - "The wire is far too short."
+  - "You pricked an artery with the wire!"
+  - "The wire kinked and won't bind."
+  - "You twisted it so tight the bone cracked."
 
 # Skill Fail Messages (Splint - slot 41)
 skill-fail-splint:
@@ -271,39 +242,24 @@ skill-fail-splint:
   - "It's not immobilizing properly!"
   - "You dropped the splint!"
 
-# Skill Fail Messages (Clamp - slot 42)
-skill-fail-clamp:
-  - "The clamp fell out of your hand, oh well."
+# Skill Fail Messages (Artery Forceps - slot 42)
+skill-fail-artery-forceps:
+  - "The forceps fell out of your hand, oh well."
   - "You clamped the wrong vessel!"
-  - "The clamp slipped off!"
+  - "The forceps slipped off!"
   - "You crushed the tissue!"
-  - "The clamp is too tight!"
+  - "The ratchet won't catch!"
   - "You clamped a nerve!"
-  - "The clamp broke!"
-  - "You dropped it in the wound!"
-  - "It won't stay closed!"
-  - "You applied it backwards!"
-  - "The spring is too weak!"
-  - "You clamped healthy tissue!"
-  - "The clamp is contaminated!"
+  - "You dropped them in the wound!"
   - "You lost your grip!"
 
-# Skill Fail Messages (Transfusion - slot 43)
+# Skill Fail Messages (Transfusion Syringe - slot 43)
 skill-fail-transfusion:
   - "You spilled blood everywhere!"
-  - "Wrong blood type!"
-  - "The blood bag leaked!"
-  - "You mixed up the blood units!"
-  - "The blood was expired!"
-  - "You dropped the blood bag!"
-  - "The IV line kinked!"
-  - "You started the transfusion too fast!"
-  - "The blood wasn't warmed!"
-  - "Transfusion reaction!"
-  - "You punctured the bag!"
-  - "The blood separated!"
-  - "You connected the wrong tubing!"
-  - "The filter clogged!"
-
-# Skill Fail Messages (Pins - Ecto-Bones special)
-skill-fail-pins-ecto-bones: "The pin phased through the bone and jabbed an artery, shattering another bone in the process!"
+  - "The blood clotted in the syringe!"
+  - "Air got into the syringe!"
+  - "The donor fainted mid-transfusion!"
+  - "You pushed the plunger far too fast!"
+  - "The brass syringe jammed."
+  - "The needle came out of the vein."
+  - "You drew blood out instead of putting it in!"

@@ -1,5 +1,7 @@
 package net.tfminecraft.surgery.managers;
 
+import net.tfminecraft.rpcharacters.api.HealingInjuries.HealingInjury;
+import net.tfminecraft.surgery.procedures.ProcedureRegistry;
 import net.tfminecraft.tlibs.objects.api.ItemAPI;
 import net.tfminecraft.tlibs.TLibs;
 import org.bukkit.entity.Player;
@@ -17,7 +19,8 @@ public class SurgeryMenuManager {
     private ItemAPI api;
     
     // Specialized managers
-    private DiagnosisChecker diagnosisChecker;
+    private final ProcedureRegistry procedures = new ProcedureRegistry();
+    private final SurgeryRequestManager requestManager = new SurgeryRequestManager();
     private SurgeryStateManager stateManager;
     private SurgeryUIUpdater uiUpdater;
     private SurgeryMenuBuilder menuBuilder;
@@ -43,27 +46,28 @@ public class SurgeryMenuManager {
         }
 
         // Initialize all managers in dependency order
-        diagnosisChecker = new DiagnosisChecker(plugin);
+        procedures.load(plugin.getConfig(), plugin.getLogger()::warning);
         stateManager = new SurgeryStateManager();
-        uiUpdater = new SurgeryUIUpdater(plugin, stateManager, diagnosisChecker);
+        uiUpdater = new SurgeryUIUpdater(plugin, stateManager);
         completionHandler = new SurgeryCompletionHandler(plugin, stateManager, uiUpdater);
-        mechanicsManager = new SurgeryMechanicsManager(plugin, api, stateManager, uiUpdater, completionHandler, diagnosisChecker, itemsConfig);
+        mechanicsManager = new SurgeryMechanicsManager(plugin, api, stateManager, uiUpdater, completionHandler, itemsConfig);
         menuBuilder = new SurgeryMenuBuilder(plugin, api, stateManager, uiUpdater, itemsConfig);
-        itemHandler = new SurgeryItemHandler(plugin, api, stateManager, uiUpdater, mechanicsManager, completionHandler, diagnosisChecker, itemsConfig);
+        itemHandler = new SurgeryItemHandler(plugin, api, stateManager, uiUpdater, mechanicsManager, completionHandler, itemsConfig);
         
         // Initialize any managers that need config
-        mechanicsManager.initialize();
         itemHandler.initialize();
         
         plugin.getLogger().info("[Surgery] Surgery menu manager initialized!");
     }
     
     // ==============================================
-    // Opens the surgery menu for the surgeon, operating on the specified patient
+    // Opens the surgery menu for the surgeon, operating on the patient's ailment
     // ==============================================
-    public void openSurgeryMenu(Player surgeon, Player patient) {
+    public void openSurgeryMenu(Player surgeon, Player patient, HealingInjury ailment) {
         stateManager.setPatientName(surgeon.getUniqueId(), patient.getName());
         stateManager.setPatientUuid(surgeon.getUniqueId(), patient.getUniqueId());
+        stateManager.setAilment(surgeon.getUniqueId(), ailment.traitId(), ailment.displayName(),
+            procedures.get(ailment.traitId()));
         menuBuilder.buildAndOpenMenu(surgeon);
     }
     
@@ -121,6 +125,7 @@ public class SurgeryMenuManager {
     // Getters for accessing individual managers
     // ==============================================
     public SurgeryStateManager getStateManager() { return stateManager; }
+    public SurgeryRequestManager getRequestManager() { return requestManager; }
     public SurgeryUIUpdater getUiUpdater() { return uiUpdater; }
     public SurgeryMenuBuilder getMenuBuilder() { return menuBuilder; }
     public SurgeryCompletionHandler getCompletionHandler() { return completionHandler; }

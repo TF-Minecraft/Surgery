@@ -1,5 +1,19 @@
 # Surgery Plugin Configuration
-# This file contains all gameplay settings and mechanics
+# Physicians operate on the healing ailments of RPCharacters characters
+# (broken arm, broken leg, half blind, ...). Permanent injuries cannot be
+# treated. A successful surgery cures the ailment; a failed one makes it take
+# longer to heal.
+
+# Permission needed to operate. The Physician profession upgrade grants it,
+# the same permission that unlocks crafting the surgical tools
+permission: "professions.physician"
+
+# Healing time added to the ailment when a surgery fails after the patient
+# was sedated or cut (d/h/m/s, e.g. "12h" or "1d 6h"; "0h" disables it)
+failure-healing-penalty: "12h"
+
+# How long a patient has to accept a surgery offer
+request-timeout-seconds: 60
 
 # Maximum distance in blocks between surgeon and patient to perform surgery
 max-surgery-distance: 5.0
@@ -9,95 +23,44 @@ max-surgery-distance: 5.0
 patient-leave-distance-multiplier: 2.0
 
 # ============================================
-# DIAGNOSES
+# PROCEDURES
 # ============================================
 
-# List of possible diagnoses/injuries
-# These are randomly assigned when the ultrasound is used
-diagnoses:
-  - "Torn Tongue Muscle"
-  - "Paper Cuts"
-  - "Grumbleteeth"
-  - "Chicken Feet"
-  - "Broken Heart"
-  - "Brain Eating Amoeba"
-  - "Ecto-Bones"
-  - "Moldy Guts"
-  - "Fatty Liver"
-  - "Arcane Infection"
-  - "Lupus"
-  - "Broken Arm"
-  - "Broken Leg"
-  - "Bird Flu"
-  - "Turtle Flu"
-  - "Monkey Flu"
-  - "Lung Tumor"
-  - "Brain Tumor"
-  - "Liver Infection"
-  - "Kidney Failure"
-  - "Appendicitis"
-  - "Nose Job"
-  - "Herniated Disc"
-  - "Heart Attack"
-  - "Swallowed Ingot"
-  - "Broken Everything"
-  - "Serious Head Injury"
-  - "Serious Trauma"
-  - "Massive Trauma"
+# How each healing ailment is operated on, keyed by RPCharacters trait ID.
+# The stethoscope examination reveals the procedure. Once required-incisions
+# are made, the bones are exposed; after every bone is set, the linen dressing
+# treats the ailment.
+# Complications:
+#   haemorrhage - the wound keeps reopening and bleeding
+#   shock       - the patient may collapse under chloroform
+#   sepsis      - the patient is feverish and the fever keeps climbing
+procedures:
+  broken_arm:
+    name: "Fractured Arm"
+    required-incisions: 2
+    broken-bones: 2
+    shattered-bones: 0
+    complications: []
+  broken_leg:
+    name: "Compound Fracture of the Leg"
+    required-incisions: 2
+    broken-bones: 2
+    shattered-bones: 1
+    complications: [haemorrhage]
+  half_blind:
+    name: "Injured Eye"
+    required-incisions: 1
+    broken-bones: 0
+    shattered-bones: 0
+    complications: [shock, sepsis]
 
-# Diagnoses that are flu types (require temperature at 98.6°F to use surgical glove)
-flu-diagnoses:
-  - "Bird Flu"
-  - "Turtle Flu"
-  - "Monkey Flu"
-
-# Required incisions for each diagnosis to unlock the surgical glove and "Fix" the patient
-required-incisions:
-  "Nose Job": 1
-  "Lung Tumor": 1
-  "Heart Attack": 2
-  "Brain Tumor": 5
-  "Liver Infection": 2
-  "Kidney Failure": 2
-  "Appendicitis": 3
-  "Swallowed Ingot": 2
-  "Herniated Disc": 3
-  "Serious Head Injury": 4
-  "Serious Trauma": 2
-  "Massive Trauma": 3
-  "Torn Tongue Muscle": 1
-  "Paper Cuts": 2
-  "Grumbleteeth": 1
-  "Chicken Feet": 1
-  "Broken Heart": 1
-  "Brain Eating Amoeba": 5
-  "Ecto-Bones": 1
-  "Moldy Guts": 2
-  "Fatty Liver": 3
-  "Arcane Infection": 3
-  "Lupus": 3
-  "Broken Arm": 2
-  "Broken Leg": 2
-  "Broken Everything": 4
-
-# ============================================
-# BONE COUNTS
-# ============================================
-
-# Number of broken and shattered bones for bone-related diagnoses
-bone-counts:
-  "Broken Arm":
-    broken: 2
-    shattered: 0
-  "Broken Leg":
-    broken: 2
-    shattered: 1
-  "Ecto-Bones":
-    broken: 1
-    shattered: 2
-  "Broken Everything":
-    broken: 3
-    shattered: 2
+# Used for healing ailments with no procedure above
+default-procedure:
+  name: "Injury"
+  required-incisions: 2
+  broken-bones: 0
+  shattered-bones: 0
+  complications: []
 
 # ============================================
 # SKILL FAIL CHANCES
@@ -120,9 +83,7 @@ temperature:
   red-temp-threshold: 106.0              # Red temp danger zone
   success-threshold: 100.0               # Must be <= this to succeed
   rise-rate: 1.8                         # Temp increase per move
-  antibiotics-change: 5.4                # ±F from antibiotics
-  flu-temp-min: 99.0                     # Min initial temp for flu diagnoses
-  flu-temp-max: 104.0                    # Max initial temp for flu diagnoses
+  tincture-change: 5.4                   # ±F from the willow-bark tincture
 
 # ============================================
 # PULSE SETTINGS
@@ -137,13 +98,13 @@ pulse:
 # ============================================
 
 death-timers:
-  defibrillator-countdown: 2             # Moves until death after heart stops
+  collapse-countdown: 2                  # Moves until death after the patient collapses
   weak-pulse-turns: 2                    # Consecutive turns with Extremely Weak pulse
   red-temp-turns: 2                      # Consecutive turns with red temperature
-  anesthetic-reuse-cooldown: 4           # Moves before anesthetic can be reused
+  anesthetic-reuse-cooldown: 4           # Moves before chloroform can be given again
 
 # ============================================
-# ANESTHETIC WEAR-OFF
+# CHLOROFORM WEAR-OFF
 # ============================================
 
 anesthetic:
@@ -151,46 +112,27 @@ anesthetic:
   coming-to-moves: 2                     # Moves of "Coming to" before patient is fully awake
 
 # ============================================
-# BONE MECHANICS
+# COMPLICATIONS
 # ============================================
 
-bones:
-  # Chance to randomly reveal a bone with each scalpel use for non-bone diagnoses
-  random-reveal-chance: 0.25
-
-# ============================================
-# DIAGNOSIS-SPECIFIC MECHANICS
-# ============================================
-
-diagnosis-mechanics:
-  moldy-guts:
-    bleeding-interval-min: 3             # Forces bleeding every 3-4 moves
+complications:
+  haemorrhage:
+    bleeding-interval-min: 3             # Forces bleeding every 3-4 moves since the last sponge
     bleeding-interval-max: 4
-  
-  fatty-liver:
-    heart-stop-chance: 0.20              # 20% chance heart stops when unconscious
-  
-  broken-heart:
-    heart-stop-chance: 0.35              # 35% chance heart stops when unconscious
-  
-  arcane-infection:
-    chaos-chance: 0.25                   # 25% chance for chaos each move
-    temp-spike-max: 4.0                  # Random temp spike up to +4°F
-    temp-drop-max: 2.0                   # Random temp drop up to -2°F
-  
-  lupus:
-    howl-chance: 0.15                    # 15% chance for howl effect
-  
-  paper-cuts:
-    scalpel-uses-required: 2             # Scalpel uses to examine wounds
+  shock:
+    collapse-chance: 0.20                # Chance per move to collapse while unconscious
+  sepsis:
+    fever-min: 100.0                     # Fever found by the examination
+    fever-max: 104.0
 
 # ============================================
 # COMMANDS
 # ============================================
 
 # Commands to execute on surgery completion
-# Use %surgeon% for the surgeon's name and %player% for the patient's name
+# Use %surgeon% for the surgeon's name, %player% for the patient's name,
+# and %ailment% for the ailment
 # These are executed by the console
 commands:
-  surgery-success: "sudo %surgeon% me Successfully treated %player%!"
-  surgery-failure: "sudo %surgeon% me Failed surgery on %player%!"
+  surgery-success: "sudo %surgeon% me Successfully operated on %player%'s %ailment%!"
+  surgery-failure: "sudo %surgeon% me Failed to mend %player%'s %ailment%!"

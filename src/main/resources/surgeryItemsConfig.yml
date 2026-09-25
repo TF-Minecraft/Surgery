@@ -1,18 +1,20 @@
 # Surgery Items Configuration
-# Configure the TLibs item paths for all surgery tools
+# TLibs item paths for the Victorian surgical instruments.
+# The MMOItems IDs predate the Victorian redesign; keeping them means tools
+# players already crafted keep working.
 
 items:
   sponge: "m.surgery.sponge"
   scalpel: "m.surgery.scalpel"
-  stitches: "m.surgery.stitches"
-  antibiotics: "m.surgery.antibiotics"
-  antiseptic: "m.surgery.antiseptic"
-  surgical-glove: "m.surgery.surgical_glove"
-  ultrasound: "m.surgery.ultrasound"
-  lab-kit: "m.surgery.lab_kit"
-  anesthetic: "m.surgery.anesthetic"
-  defibrillator: "m.surgery.defibrillator"
-  pins: "m.surgery.pins"
+  suture: "m.surgery.stitches"
+  tincture: "m.surgery.antibiotics"
+  carbolic-acid: "m.surgery.antiseptic"
+  dressing: "m.surgery.surgical_glove"
+  stethoscope: "m.surgery.ultrasound"
+  thermometer: "m.surgery.lab_kit"
+  chloroform: "m.surgery.anesthetic"
+  smelling-salts: "m.surgery.defibrillator"
+  silver-wire: "m.surgery.pins"
   splint: "m.surgery.splint"
-  clamp: "m.surgery.clamp"
+  artery-forceps: "m.surgery.clamp"
   transfusion: "m.surgery.transfusion"

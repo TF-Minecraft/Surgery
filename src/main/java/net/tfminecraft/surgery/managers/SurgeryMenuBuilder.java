@@ -36,38 +36,23 @@ public class SurgeryMenuBuilder {
     public void buildAndOpenMenu(Player player) {
         Inventory menu = new SurgeryMenuHolder().getInventory();
         
-        // Map specific slots to item config indexes
-        int[][] slotMapping = {
-            {SurgeryConstants.SLOT_SPONGE, 0},
-            {SurgeryConstants.SLOT_SCALPEL, 1},
-            {SurgeryConstants.SLOT_STITCHES, 2},
-            {SurgeryConstants.SLOT_ANTISEPTIC, 4},
-            {SurgeryConstants.SLOT_ULTRASOUND, 6},
-            {SurgeryConstants.SLOT_LAB_KIT, 7},
-            {SurgeryConstants.SLOT_ANESTHETIC, 8},
-            {SurgeryConstants.SLOT_TRANSFUSION, 13}
-
-            // Antibiotics appear after using the lab kit
-            // Surgical Glove, Defibrillator, Pins, Splint, and Clamp
-            // appear dynamically
+        // Tools on the table from the start; the tincture appears after the
+        // thermometer, and the dressing, smelling salts, silver wire, splint,
+        // and artery forceps appear when needed
+        SurgeryTool[] startingTools = {
+            SurgeryTool.SPONGE, SurgeryTool.SCALPEL, SurgeryTool.SUTURE, SurgeryTool.CARBOLIC_ACID,
+            SurgeryTool.STETHOSCOPE, SurgeryTool.THERMOMETER, SurgeryTool.CHLOROFORM, SurgeryTool.TRANSFUSION
         };
-        
-        // Place items in the specified slots
-        for (int[] mapping : slotMapping) {
-            int slot = mapping[0];
-            int itemIndex = mapping[1];
-            
-            String itemPath = itemsConfig.getItemPath(itemIndex);
-            if (itemPath != null) {
-                ItemStack item = api.getCreator().getItemFromPath(itemPath);
-                if (item != null) {
-                    menu.setItem(slot, item);
-                } else {
-                    plugin.getLogger().warning("[Surgery] Could not load item: " + itemPath);
-                }
+        for (SurgeryTool tool : startingTools) {
+            String itemPath = itemsConfig.getItemPath(tool);
+            ItemStack item = itemPath == null ? null : api.getCreator().getItemFromPath(itemPath);
+            if (item != null) {
+                menu.setItem(tool.getSlot(), item);
+            } else {
+                plugin.getLogger().warning("[Surgery] Could not load item: " + itemPath);
             }
         }
-        
+
         // Add placeholder info blocks
         for (int i = SurgeryConstants.INFO_SLOT_FIRST; i <= SurgeryConstants.INFO_SLOT_LAST; i++) {
             ItemStack infoBlock = uiUpdater.createInfoBlock(Material.RED_CONCRETE, " ", "");
@@ -89,8 +74,7 @@ public class SurgeryMenuBuilder {
         // ==============================================
         // Set the first info block (slot 10) as "diagnosis"
         // ==============================================
-        ItemStack diagnosisBlock = uiUpdater.createInfoBlock(Material.RED_CONCRETE, ChatColor.GOLD + "Diagnosis", ChatColor.GRAY + "The patient has not been diagnosed.");
-        menu.setItem(SurgeryConstants.SLOT_DIAGNOSIS, diagnosisBlock);
+        uiUpdater.updateDiagnosisBlock(menu, playerId);
         
         // ==============================================
         // Set the second info block (slot 11) as "pulse". Always starts at Strong
