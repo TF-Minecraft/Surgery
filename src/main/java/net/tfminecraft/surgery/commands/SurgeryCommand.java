@@ -81,9 +81,15 @@ public class SurgeryCommand implements TabExecutor {
             return;
         }
 
+        long now = System.currentTimeMillis();
+        if (requests.pending(patient.getUniqueId(), now) != null) {
+            surgeon.sendMessage(uiUpdater.getMessage("request-already-pending").replace("%patient%", patient.getName()));
+            return;
+        }
+
         int timeoutSeconds = Math.max(10, plugin.getConfig().getInt("request-timeout-seconds", 60));
         requests.offer(patient.getUniqueId(), surgeon.getUniqueId(), ailment.traitId(),
-            System.currentTimeMillis() + timeoutSeconds * 1000L);
+            now + timeoutSeconds * 1000L);
 
         String ailmentName = ChatColor.stripColor(ailment.displayName());
         String penalty = plugin.getConfig().getString("failure-healing-penalty", "12h");

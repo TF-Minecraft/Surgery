@@ -20,6 +20,21 @@ public class SurgeryRequestManager {
     }
 
     // ==============================================
+    // The patient's current offer, or null when there is none or it has expired
+    // ==============================================
+    public Request pending(UUID patientId, long now) {
+        Request request = requests.get(patientId);
+        if (request == null) {
+            return null;
+        }
+        if (request.expiresAt() < now) {
+            requests.remove(patientId);
+            return null;
+        }
+        return request;
+    }
+
+    // ==============================================
     // Removes and returns the patient's request if it has not expired
     // ==============================================
     public Request take(UUID patientId, long now) {

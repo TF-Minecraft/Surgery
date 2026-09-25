@@ -69,15 +69,18 @@ public class SurgeryCompletionHandler {
         String ailment = stateManager.getAilmentName(surgeonId);
         Player patient = patientOf(surgeonId);
 
-        executeCompletionCommand(surgeon, true);
-        stateManager.cleanup(surgeonId);
-        closeMenuNextTick(surgeon);
-
-        // The ailment may have healed on its own while the operation was running
+        // The ailment may have healed on its own while the operation was running.
+        // Do not announce a success the cure did not actually perform.
         if (patient == null || !Ailments.cure(patient, traitId)) {
+            stateManager.cleanup(surgeonId);
+            closeMenuNextTick(surgeon);
             surgeon.sendMessage(uiUpdater.getMessage("ailment-already-healed").replace("%ailment%", ailment));
             return;
         }
+
+        executeCompletionCommand(surgeon, true);
+        stateManager.cleanup(surgeonId);
+        closeMenuNextTick(surgeon);
 
         surgeon.playSound(surgeon.getLocation(), Sound.UI_TOAST_CHALLENGE_COMPLETE, 1.0f, 1.0f);
         surgeon.sendMessage(uiUpdater.getMessage("surgery-successful"));

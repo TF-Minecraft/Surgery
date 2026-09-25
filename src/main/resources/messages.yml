@@ -15,6 +15,7 @@ command-no-ailment: "&e%patient% has no ailment that surgery can treat."
 
 # Consent
 request-sent: "&7You offered to operate on &f%patient%&7's &f%ailment%&7. Waiting for them to accept..."
+request-already-pending: "&c%patient% already has a surgery offer waiting. They need to accept or deny it first."
 request-received: "&6Dr. %surgeon% &eoffers to operate on your &f%ailment% &e(&f%remaining%&e left to heal). &7If the surgery fails, it will take &c%extra% &7longer to heal. This offer expires in %seconds%s."
 request-accept-button: "&a&l[Accept]"
 request-deny-button: "&c&l[Deny]"
