@@ -32,7 +32,9 @@ public class SurgeryPlugin extends JavaPlugin {
         }
 
         getServer().getPluginManager().registerEvents(new PlayerListener(surgeryMenuManager), this);
-        getCommand("surgery").setExecutor(new SurgeryCommand(surgeryMenuManager, this));
+        SurgeryCommand surgeryCommand = new SurgeryCommand(surgeryMenuManager, this);
+        getCommand("surgery").setExecutor(surgeryCommand);
+        getCommand("surgery").setTabCompleter(surgeryCommand);
 
         getLogger().info("surgery has been enabled!");
     }

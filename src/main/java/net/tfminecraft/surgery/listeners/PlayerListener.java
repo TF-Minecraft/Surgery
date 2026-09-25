@@ -27,6 +27,9 @@ public class PlayerListener implements Listener {
         // The quitting player may also be someone's patient; fail that surgeon's
         // surgery now instead of on their next move
         menuManager.handlePatientQuit(event.getPlayer());
+
+        // Pending offers to or from the quitting player can no longer be answered
+        menuManager.getRequestManager().forget(event.getPlayer().getUniqueId());
     }
 
     @EventHandler

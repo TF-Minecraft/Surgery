@@ -3,15 +3,9 @@ version: ${project.version}
 name: surgery
 author: Justin
 api-version: '1.21.10'
-depend: [TLibs]
+depend: [TLibs, RPCharacters]
 
 commands:
   surgery:
-    description: Opens the surgery menu
-    usage: /surgery <player_name>
-    permission: surgery.use
-
-permissions:
-  surgery.use:
-    description: Allows performing surgery on another player
-    default: true
+    description: Offer surgery to a patient, or accept or deny an offer
+    usage: /surgery <player> | accept | deny

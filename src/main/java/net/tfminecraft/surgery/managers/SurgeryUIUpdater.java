@@ -1,5 +1,6 @@
 package net.tfminecraft.surgery.managers;
 
+import net.tfminecraft.surgery.procedures.Procedure;
 import org.bukkit.ChatColor;
 import org.bukkit.Material;
 import org.bukkit.configuration.file.FileConfiguration;
@@ -20,13 +21,11 @@ public class SurgeryUIUpdater {
     
     private final JavaPlugin plugin;
     private final SurgeryStateManager stateManager;
-    private final DiagnosisChecker diagnosisChecker;
     private FileConfiguration messages;
     
-    public SurgeryUIUpdater(JavaPlugin plugin, SurgeryStateManager stateManager, DiagnosisChecker diagnosisChecker) {
+    public SurgeryUIUpdater(JavaPlugin plugin, SurgeryStateManager stateManager) {
         this.plugin = plugin;
         this.stateManager = stateManager;
-        this.diagnosisChecker = diagnosisChecker;
         loadMessages();
     }
     
@@ -131,37 +130,37 @@ public class SurgeryUIUpdater {
     
     // ==============================================
     // Updates the diagnosis block
+    // Before the stethoscope examination only the patient's complaint is known
     // ==============================================
     // Keep the existing legacy text representation, formatting, and exact-string comparisons.
     @SuppressWarnings("deprecation")
     public void updateDiagnosisBlock(Inventory menu, UUID playerId) {
-        String diagnosis = stateManager.getDiagnosis(playerId);
-        boolean cured = stateManager.isCured(playerId);
-        
-        Material diagnosisColor = cured ? Material.LIME_CONCRETE : Material.RED_CONCRETE;
-        String diagnosisText = diagnosis != null ? ChatColor.GRAY + diagnosis : ChatColor.GRAY + "The patient has not been diagnosed.";
-        
-        ItemStack diagnosisBlock;
-        if (diagnosis != null && diagnosisChecker.hasBones(diagnosis)) {
-            // ==============================================
-            // Show bone information in description
-            // ==============================================
-            int brokenBones = stateManager.getRevealedBrokenBones(playerId);
-            int shatteredBones = stateManager.getRevealedShatteredBones(playerId);
-            
-            java.util.List<String> lore = new java.util.ArrayList<>();
-            lore.add(diagnosisText);
-            lore.add(ChatColor.YELLOW + "Broken Bones: " + ChatColor.GRAY + brokenBones);
-            lore.add(ChatColor.RED + "Shattered Bones: " + ChatColor.GRAY + shatteredBones);
-            
-            diagnosisBlock = createInfoBlock(diagnosisColor, ChatColor.GOLD + "Diagnosis", lore);
+        String ailment = stateManager.getAilmentName(playerId);
+        java.util.List<String> lore = new java.util.ArrayList<>();
+        Material color;
+
+        Procedure procedure = stateManager.getProcedure(playerId);
+        if (!stateManager.isExamined(playerId) || procedure == null) {
+            color = Material.RED_CONCRETE;
+            lore.add(ChatColor.GRAY + "Complaint: " + ChatColor.WHITE + ailment);
+            lore.add(ChatColor.GRAY + "Examine the patient with the stethoscope.");
         } else {
-            diagnosisBlock = createInfoBlock(diagnosisColor, ChatColor.GOLD + "Diagnosis", diagnosisText);
+            color = stateManager.isCured(playerId) ? Material.LIME_CONCRETE : Material.YELLOW_CONCRETE;
+            lore.add(ChatColor.GRAY + "The patient suffers from " + ChatColor.WHITE + procedure.name());
+            lore.add(ChatColor.GRAY + "Ailment: " + ChatColor.WHITE + ailment);
+            lore.add(ChatColor.GRAY + "Incisions needed: " + ChatColor.WHITE + procedure.requiredIncisions());
+            if (procedure.hasBones()) {
+                lore.add(ChatColor.YELLOW + "Broken Bones: " + ChatColor.GRAY + stateManager.getRevealedBrokenBones(playerId));
+                lore.add(ChatColor.RED + "Shattered Bones: " + ChatColor.GRAY + stateManager.getRevealedShatteredBones(playerId));
+            }
+            if (stateManager.isCured(playerId)) {
+                lore.add(ChatColor.GREEN + "Treated and dressed");
+            }
         }
-        
-        menu.setItem(SurgeryConstants.SLOT_DIAGNOSIS, diagnosisBlock);
+
+        menu.setItem(SurgeryConstants.SLOT_DIAGNOSIS, createInfoBlock(color, ChatColor.GOLD + "Diagnosis", lore));
     }
-    
+
     // ==============================================
     // Sends a numbered message to the player
     // ==============================================
