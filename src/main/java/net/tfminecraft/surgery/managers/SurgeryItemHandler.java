@@ -93,6 +93,12 @@ public class SurgeryItemHandler {
             // Update the menu based on what was clicked
             updateMenu(player, tool);
 
+            // Tool handling can also end the operation (for example, chloroform
+            // misuse). Completion owns the final feedback once the session ends.
+            if (!stateManager.hasSession(playerId)) {
+                return;
+            }
+
             // Play correct sound only if no skill fail occurred
             String skillFailMsg = stateManager.getSkillFail(playerId);
             if (skillFailMsg.isEmpty()) {
@@ -114,6 +120,10 @@ public class SurgeryItemHandler {
         Inventory menu = player.getOpenInventory().getTopInventory();
         UUID playerId = player.getUniqueId();
         boolean skillFail = isSkillFail(playerId);
+
+        // Consume the previous sponge's protection after this move's roll.
+        // A successful sponge below can then protect the following move.
+        stateManager.setSpongeEffect(playerId, false);
 
         String skillFailMsg = switch (tool) {
             case SPONGE -> handleSponge(player, menu, playerId, skillFail);
@@ -149,9 +159,6 @@ public class SurgeryItemHandler {
         String skillFailDisplay = skillFailMsg.isEmpty() ? ChatColor.GRAY + "Nothing to show here" : ChatColor.GRAY + skillFailMsg;
         ItemStack skillFailBlock = uiUpdater.createInfoBlock(skillFailColor, ChatColor.GOLD + "Skill Fail", skillFailDisplay);
         menu.setItem(SurgeryConstants.SLOT_SKILL_FAIL, skillFailBlock);
-
-        // Clear sponge effect (it only lasts for one move)
-        stateManager.setSpongeEffect(playerId, false);
 
         // Play "broken item" sound if skill fail occurred
         if (!skillFailMsg.isEmpty()) {
