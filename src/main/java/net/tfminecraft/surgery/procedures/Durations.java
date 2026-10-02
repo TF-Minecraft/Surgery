@@ -27,13 +27,18 @@ public final class Durations {
             if (!normalized.substring(end, matcher.start()).isBlank()) {
                 return -1L;
             }
-            long amount = Long.parseLong(matcher.group(1));
-            total += switch (matcher.group(2)) {
-                case "d" -> amount * 86_400_000L;
-                case "h" -> amount * 3_600_000L;
-                case "m" -> amount * 60_000L;
-                default -> amount * 1_000L;
-            };
+            try {
+                long amount = Long.parseLong(matcher.group(1));
+                long unit = switch (matcher.group(2)) {
+                    case "d" -> 86_400_000L;
+                    case "h" -> 3_600_000L;
+                    case "m" -> 60_000L;
+                    default -> 1_000L;
+                };
+                total = Math.addExact(total, Math.multiplyExact(amount, unit));
+            } catch (NumberFormatException | ArithmeticException ex) {
+                return -1L;
+            }
             end = matcher.end();
         }
         return end > 0 && normalized.substring(end).isBlank() ? total : -1L;
@@ -44,8 +49,9 @@ public final class Durations {
     // ==============================================
     public static String formatHours(long ms) {
         if (ms < 3_600_000L) {
-            return Math.max(0L, (ms + 59_999L) / 60_000L) + "m";
+            long nonnegative = Math.max(0L, ms);
+            return (nonnegative / 60_000L + (nonnegative % 60_000L == 0 ? 0 : 1)) + "m";
         }
-        return ((ms + 3_599_999L) / 3_600_000L) + "h";
+        return (ms / 3_600_000L + (ms % 3_600_000L == 0 ? 0 : 1)) + "h";
     }
 }

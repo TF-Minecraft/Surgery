@@ -82,4 +82,14 @@ class ProcedureRegistryTest {
         assertEquals(1, warnings.size());
         assertTrue(registry.get("broken_arm").has(Complication.SHOCK));
     }
+
+    @Test
+    void absentProceduresAndNullTraitUseTheBuiltInDefault() throws InvalidConfigurationException {
+        ProcedureRegistry registry = load("{}", new ArrayList<>());
+        assertEquals("Injury", registry.get(null).name());
+        assertEquals(registry.get(null), registry.get("unknown"));
+        org.junit.jupiter.api.Assertions.assertNull(Complication.fromConfig(null));
+        registry.load(new YamlConfiguration(), message -> { throw new AssertionError(message); });
+        assertEquals(2, registry.get(null).requiredIncisions());
+    }
 }
