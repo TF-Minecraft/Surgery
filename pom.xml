@@ -12,9 +12,9 @@
     <url>tfminecraft.net</url>
 
     <properties>
-        <argLine></argLine>
         <maven.compiler.release>21</maven.compiler.release>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <argLine></argLine>
         <rpcharacters.version>2.4.0</rpcharacters.version>
         <tlibs.version>2.0.0</tlibs.version>
     </properties>
