@@ -8,10 +8,10 @@ Each move matters: sedating the patient, cleaning the site, opening an incision,
 
 ## Features
 
-- **Real ailments** — the operation targets the patient's own healing injury. A success cures it; a failure makes it take longer to heal. Permanent injuries cannot be operated on.
-- **Physicians only** — operating requires the Physician profession upgrade, the same permission that unlocks crafting the instruments.
+- **Real ailments** — the operation targets the patient's own healing injury. Success cures it; failure after sedation or cutting can extend recovery. Permanent injuries cannot be operated on.
+- **Physician access** — by default, operating requires the Physician profession permission that also unlocks crafting the instruments.
 - **Patient consent** — the patient must accept the surgeon's offer, which states the ailment and what a failure would cost.
-- **Victorian instruments** — stethoscope, chloroform, carbolic acid, scalpel, catgut suture, artery forceps, splint, silver wire, smelling salts, transfusion syringe, clinical thermometer, willow-bark tincture, and linen dressing.
+- **Victorian instruments** — diagnose, sedate, clean, cut, set bones, and dress wounds with period tools and medicines.
 - **Changing patient vitals** — consciousness, pulse, temperature, bleeding, and cleanliness affect the course of treatment.
 - **Procedures and complications** — each ailment has its own procedure, with bones to set and complications such as haemorrhage, shock, and sepsis.
 
@@ -25,12 +25,16 @@ Technical documentation is maintained in [TF-Minecraft/Docs](https://github.com/
 
 ## Tests and coverage
 
-Run `mvn clean verify` with Java 21 and the pinned plugin dependencies installed.
-The build runs the tests and enforces **100% executable-line coverage** across
+Run `mvn clean verify` with Java 21 after installing the pinned plugin
+dependencies using the [build guide](https://github.com/TF-Minecraft/Docs/blob/main/projects/Surgery/overview.md#building-from-source).
+JUnit 5, Mockito, and MockBukkit cover consent, procedures, tools, patient vitals,
+completion, commands, and lifecycle behaviour. Surefire test results are in
+`target/surefire-reports/`. The build enforces **100% executable-line coverage** across
 all production Java classes, with no coverage exclusions. JaCoCo's HTML and XML
 reports are written to `target/site/jacoco/` and uploaded by the Build workflow.
 Branch and instruction coverage are reported separately; the enforced threshold
-is line coverage. Build and maintenance scripts are outside this runtime-code metric.
+is line coverage. Build and maintenance scripts are outside this runtime-code
+metric; live RPCharacters integration and multiplayer play need server testing.
 
 ## License
 
