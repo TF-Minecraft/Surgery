@@ -7,7 +7,6 @@ import org.bukkit.Sound;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.java.JavaPlugin;
 
-import java.util.Objects;
 import java.util.UUID;
 
 // ==============================================
@@ -187,23 +186,45 @@ public class SurgeryCompletionHandler {
     }
 
     // ==============================================
-    // The patient, or null once they have left or switched to another
-    // character, so a cure or penalty never lands on a different character
+    // The patient, or null once they have left or their character was
+    // switched away or permakilled, so a cure or penalty never lands on
+    // a different character
     // ==============================================
     private Player patientOf(UUID surgeonId) {
         UUID patientId = stateManager.getPatientUuid(surgeonId);
         Player patient = patientId == null ? null : Bukkit.getPlayer(patientId);
-        if (patient == null || !Objects.equals(stateManager.getPatientCharacterId(surgeonId), Ailments.characterId(patient))) {
+        if (patient == null || !stateManager.isOriginalPatient(surgeonId, Ailments.characterId(patient))) {
             return null;
         }
         return patient;
     }
 
     // ==============================================
+    // Whether both participants are still the characters the operation began
+    // on; a patient who logged off counts as unchanged
+    // ==============================================
+    private boolean sameCharacters(Player surgeon) {
+        UUID surgeonId = surgeon.getUniqueId();
+        if (!stateManager.isOriginalSurgeon(surgeonId, Ailments.characterId(surgeon))) {
+            return false;
+        }
+        UUID patientId = stateManager.getPatientUuid(surgeonId);
+        Player patient = patientId == null ? null : Bukkit.getPlayer(patientId);
+        return patient == null
+            ? !stateManager.hasPatientChanged(surgeonId)
+            : stateManager.isOriginalPatient(surgeonId, Ailments.characterId(patient));
+    }
+
+    // ==============================================
     // Executes the configured command for surgery completion (success or failure)
+    // Commands name accounts, so they are skipped once either participant has
+    // changed character; they would land on whoever is now active
     // ==============================================
     private void executeCompletionCommand(Player surgeon, boolean success) {
         UUID surgeonId = surgeon.getUniqueId();
+        if (!sameCharacters(surgeon)) {
+            return;
+        }
         String patientName = stateManager.getPatientName(surgeonId);
 
         String configKey = success ? "commands.surgery-success" : "commands.surgery-failure";

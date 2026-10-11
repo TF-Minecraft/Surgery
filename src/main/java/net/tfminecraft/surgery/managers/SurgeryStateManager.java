@@ -4,6 +4,7 @@ import net.tfminecraft.surgery.procedures.Procedure;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Objects;
 import java.util.UUID;
 
 // ==============================================
@@ -19,8 +20,12 @@ public class SurgeryStateManager {
     private static class SurgerySession {
         String patientName;
         UUID patientUuid;
-        // The patient's character when the operation began
+        // Both participants' characters when the operation began
+        String surgeonCharacterId;
         String patientCharacterId;
+        // Set once that participant's character was switched away or permakilled
+        Boolean surgeonChanged;
+        Boolean patientChanged;
         String traitId;
         String ailmentName;
         Procedure procedure;
@@ -92,6 +97,7 @@ public class SurgeryStateManager {
     public String getPatientName(UUID playerId) { SurgerySession s = get(playerId); return s == null || s.patientName == null ? "Unknown" : s.patientName; }
     public UUID getPatientUuid(UUID playerId) { SurgerySession s = get(playerId); return s == null ? null : s.patientUuid; }
     public String getPatientCharacterId(UUID playerId) { SurgerySession s = get(playerId); return s == null ? null : s.patientCharacterId; }
+    public String getSurgeonCharacterId(UUID playerId) { SurgerySession s = get(playerId); return s == null ? null : s.surgeonCharacterId; }
     public boolean hasSession(UUID playerId) { return sessions.containsKey(playerId); }
 
     // ==============================================
@@ -109,6 +115,22 @@ public class SurgeryStateManager {
         }
         return null;
     }
+
+    // ==============================================
+    // Whether a participant is still the character the operation began on,
+    // given their current character ID
+    // ==============================================
+    public boolean isOriginalSurgeon(UUID playerId, String characterId) {
+        SurgerySession s = get(playerId);
+        return s != null && !Boolean.TRUE.equals(s.surgeonChanged) && Objects.equals(s.surgeonCharacterId, characterId);
+    }
+
+    public boolean isOriginalPatient(UUID playerId, String characterId) {
+        SurgerySession s = get(playerId);
+        return s != null && !Boolean.TRUE.equals(s.patientChanged) && Objects.equals(s.patientCharacterId, characterId);
+    }
+
+    public boolean hasPatientChanged(UUID playerId) { SurgerySession s = get(playerId); return s != null && Boolean.TRUE.equals(s.patientChanged); }
 
     // ==============================================
     // Setters
@@ -145,6 +167,9 @@ public class SurgeryStateManager {
     public void setPatientName(UUID playerId, String name) { session(playerId).patientName = name; }
     public void setPatientUuid(UUID playerId, UUID patientUuid) { session(playerId).patientUuid = patientUuid; }
     public void setPatientCharacterId(UUID playerId, String characterId) { session(playerId).patientCharacterId = characterId; }
+    public void setSurgeonCharacterId(UUID playerId, String characterId) { session(playerId).surgeonCharacterId = characterId; }
+    public void markSurgeonChanged(UUID playerId) { SurgerySession s = get(playerId); if (s != null) { s.surgeonChanged = true; } }
+    public void markPatientChanged(UUID playerId) { SurgerySession s = get(playerId); if (s != null) { s.patientChanged = true; } }
     public void removeCollapseCountdown(UUID playerId) { SurgerySession s = get(playerId); if (s != null) { s.collapseCountdown = null; } }
 
     // ==============================================

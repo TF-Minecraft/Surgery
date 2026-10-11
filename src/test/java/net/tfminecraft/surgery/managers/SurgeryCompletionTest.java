@@ -203,26 +203,89 @@ class SurgeryCompletionTest {
     }
 
     @Test
-    void cureAndPenaltyLandOnlyOnTheCharacterOperatedOn() {
+    void failureOnASwitchedPatientSkipsCommandAndPenalty() {
         state.setPatientCharacterId(surgeonId, "original");
         state.setOperated(surgeonId, true);
-        injuries.when(() -> HealingInjuries.cure(patient, "leg")).thenReturn(true);
+        config.set("commands.surgery-failure", "damage %player% 1");
         try (MockedStatic<Ailments> characters = mockStatic(Ailments.class, CALLS_REAL_METHODS)) {
             characters.when(() -> Ailments.characterId(patient)).thenReturn("other");
             completion.failSurgery(surgeon, "failed");
-            completion.handleSuccess(surgeon);
-            injuries.verifyNoInteractions();
-            verify(surgeon).sendMessage("ailment-already-healed");
-            verify(patient, never()).sendMessage(anyString());
-
-            state.setPatientUuid(surgeonId, patientId);
-            state.setPatientCharacterId(surgeonId, "original");
-            state.setAilment(surgeonId, "leg", "Broken leg", null);
-            characters.when(() -> Ailments.characterId(patient)).thenReturn("original");
-            completion.handleSuccess(surgeon);
-            injuries.verify(() -> HealingInjuries.cure(patient, "leg"));
-            verify(patient).sendMessage("patient-surgery-successful");
         }
+        bukkit.verify(() -> Bukkit.dispatchCommand(eq(console), anyString()), never());
+        injuries.verifyNoInteractions();
+        verify(surgeon).sendMessage("failed");
+        verify(patient, never()).sendMessage(anyString());
+        assertFalse(state.hasSession(surgeonId));
+    }
+
+    @Test
+    void cureSkipsASwitchedPatient() {
+        state.setPatientCharacterId(surgeonId, "original");
+        config.set("commands.surgery-success", "reward %player%");
+        injuries.when(() -> HealingInjuries.cure(patient, "leg")).thenReturn(true);
+        try (MockedStatic<Ailments> characters = mockStatic(Ailments.class, CALLS_REAL_METHODS)) {
+            characters.when(() -> Ailments.characterId(patient)).thenReturn("other");
+            completion.handleSuccess(surgeon);
+        }
+        injuries.verifyNoInteractions();
+        bukkit.verify(() -> Bukkit.dispatchCommand(eq(console), anyString()), never());
+        verify(surgeon).sendMessage("ailment-already-healed");
+        verify(patient, never()).sendMessage(anyString());
+    }
+
+    @Test
+    void cureLandsOnTheUnchangedPatient() {
+        state.setPatientCharacterId(surgeonId, "original");
+        state.setSurgeonCharacterId(surgeonId, "doctor");
+        config.set("commands.surgery-success", "reward %player%");
+        injuries.when(() -> HealingInjuries.cure(patient, "leg")).thenReturn(true);
+        try (MockedStatic<Ailments> characters = mockStatic(Ailments.class, CALLS_REAL_METHODS)) {
+            characters.when(() -> Ailments.characterId(patient)).thenReturn("original");
+            characters.when(() -> Ailments.characterId(surgeon)).thenReturn("doctor");
+            completion.handleSuccess(surgeon);
+        }
+        injuries.verify(() -> HealingInjuries.cure(patient, "leg"));
+        bukkit.verify(() -> Bukkit.dispatchCommand(console, "reward Patient"));
+        verify(patient).sendMessage("patient-surgery-successful");
+    }
+
+    @Test
+    void switchedSurgeonSkipsCommandButUnchangedPatientTakesPenalty() {
+        state.setSurgeonCharacterId(surgeonId, "doctor");
+        state.setOperated(surgeonId, true);
+        config.set("failure-healing-penalty", "1h");
+        config.set("commands.surgery-failure", "damage %surgeon% 1");
+        injuries.when(() -> HealingInjuries.extend(patient, "leg", 3_600_000L)).thenReturn(3_600_000L);
+        try (MockedStatic<Ailments> characters = mockStatic(Ailments.class, CALLS_REAL_METHODS)) {
+            characters.when(() -> Ailments.characterId(surgeon)).thenReturn("farmer");
+            completion.handleAbandonment(surgeon);
+        }
+        bukkit.verify(() -> Bukkit.dispatchCommand(eq(console), anyString()), never());
+        injuries.verify(() -> HealingInjuries.extend(patient, "leg", 3_600_000L));
+        verify(patient).sendMessage("patient-surgery-failed");
+        verify(surgeon).sendMessage("failure-gave-up");
+    }
+
+    @Test
+    void markedCharacterChangesSkipCommandsEvenForALoggedOffPatient() {
+        state.setOperated(surgeonId, true);
+        config.set("failure-healing-penalty", "0h");
+        config.set("commands.surgery-failure", "damage %player% 1");
+        state.markSurgeonChanged(surgeonId);
+        completion.failSurgery(surgeon, "surgeon died");
+
+        bukkit.when(() -> Bukkit.getPlayer(patientId)).thenReturn(null);
+        state.setPatientUuid(surgeonId, patientId);
+        state.setOperated(surgeonId, true);
+        state.markPatientChanged(surgeonId);
+        completion.failSurgery(surgeon, "patient died");
+        bukkit.verify(() -> Bukkit.dispatchCommand(eq(console), anyString()), never());
+
+        state.setPatientUuid(surgeonId, patientId);
+        state.setPatientName(surgeonId, "Patient");
+        state.setOperated(surgeonId, true);
+        completion.failSurgery(surgeon, "patient logged off");
+        bukkit.verify(() -> Bukkit.dispatchCommand(console, "damage Patient 1"));
     }
 
     @Test

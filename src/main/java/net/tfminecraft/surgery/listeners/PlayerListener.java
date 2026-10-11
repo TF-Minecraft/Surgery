@@ -3,12 +3,14 @@ package net.tfminecraft.surgery.listeners;
 import org.bukkit.entity.Player;
 import org.bukkit.event.Listener;
 import org.bukkit.event.EventHandler;
+import org.bukkit.event.EventPriority;
 import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.inventory.InventoryCloseEvent;
 import org.bukkit.event.inventory.InventoryDragEvent;
 import org.bukkit.inventory.ItemStack;
 import net.tfminecraft.rpcharacters.lifecycle.CharacterActivatedEvent;
+import net.tfminecraft.rpcharacters.permadeath.CharacterPermakillEvent;
 import net.tfminecraft.surgery.managers.SurgeryMenuManager;
 
 public class PlayerListener implements Listener {
@@ -19,7 +21,9 @@ public class PlayerListener implements Listener {
         this.menuManager = menuManager;
     }
 
-    @EventHandler
+    // LOW runs before RPCharacters unloads the quitting player's characters,
+    // so the failure command and penalty still find the same character
+    @EventHandler(priority = EventPriority.LOW)
     public void onPlayerQuit(PlayerQuitEvent event) {
         // Fail an in-progress surgery (quitting is not a free escape from the
         // failure command) and remove leftover state so nothing leaks
@@ -38,6 +42,13 @@ public class PlayerListener implements Listener {
         // The operation belongs to the characters who began it; a switch or
         // permakill ends it before the result can land on another character
         menuManager.handleCharacterActivated(event.getOwnerUuid(), event.getCharacter().getId());
+    }
+
+    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
+    public void onCharacterPermakill(CharacterPermakillEvent event) {
+        // The kill is certain once no listener cancelled it; the last
+        // character's death fires no activation, so it is handled here
+        menuManager.handleCharacterPermakilled(event.getPlayer().getUniqueId(), event.getCharacter().getId());
     }
 
     @EventHandler

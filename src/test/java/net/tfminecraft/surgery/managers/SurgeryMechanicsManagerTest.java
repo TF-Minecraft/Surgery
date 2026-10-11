@@ -1,5 +1,6 @@
 package net.tfminecraft.surgery.managers;
 
+import net.tfminecraft.surgery.procedures.Ailments;
 import net.tfminecraft.surgery.procedures.Complication;
 import net.tfminecraft.surgery.procedures.Procedure;
 import net.tfminecraft.tlibs.objects.api.ItemAPI;
@@ -244,6 +245,42 @@ class SurgeryMechanicsManagerTest {
             when(patient.getLocation()).thenReturn(new Location(world, 10.01, 64, 0));
             move();
             verify(completion).failSurgery(player, "failure-patient-left");
+        }
+    }
+
+    @Test
+    void deadOrSwitchedPatientIsNotOnTheTable() {
+        UUID patientId = UUID.fromString("00000000-0000-0000-0000-000000000004");
+        state.setPatientUuid(id, patientId);
+        state.setPatientCharacterId(id, "patient");
+        Player patient = mock(Player.class);
+        when(patient.isOnline()).thenReturn(true);
+        when(patient.getWorld()).thenReturn(world);
+        when(patient.getLocation()).thenReturn(new Location(world, 1, 64, 0));
+        try (MockedStatic<Bukkit> bukkit = mockStatic(Bukkit.class);
+             MockedStatic<Ailments> ailments = mockStatic(Ailments.class)) {
+            bukkit.when(() -> Bukkit.getPlayer(patientId)).thenReturn(patient);
+            ailments.when(() -> Ailments.characterId(patient)).thenReturn("patient");
+            move();
+            assertEquals(1, state.getMoveCount(id));
+            verifyNoInteractions(completion);
+
+            when(patient.isDead()).thenReturn(true);
+            move();
+            verify(completion).failSurgery(player, "failure-patient-left");
+            clearInvocations(completion);
+
+            when(patient.isDead()).thenReturn(false);
+            ailments.when(() -> Ailments.characterId(patient)).thenReturn(null);
+            move();
+            verify(completion).failSurgery(player, "failure-patient-left");
+            clearInvocations(completion);
+
+            ailments.when(() -> Ailments.characterId(patient)).thenReturn("patient");
+            state.markPatientChanged(id);
+            move();
+            verify(completion).failSurgery(player, "failure-patient-left");
+            assertEquals(1, state.getMoveCount(id));
         }
     }
 
