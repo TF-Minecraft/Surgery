@@ -1,12 +1,16 @@
 package net.tfminecraft.surgery.managers;
 
 import net.tfminecraft.rpcharacters.api.HealingInjuries.HealingInjury;
+import net.tfminecraft.surgery.procedures.Ailments;
 import net.tfminecraft.surgery.procedures.ProcedureRegistry;
 import net.tfminecraft.tlibs.objects.api.ItemAPI;
 import net.tfminecraft.tlibs.TLibs;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.plugin.java.JavaPlugin;
+
+import java.util.Objects;
+import java.util.UUID;
 
 // ==============================================
 // Main file for the surgery menu system
@@ -66,6 +70,8 @@ public class SurgeryMenuManager {
     public void openSurgeryMenu(Player surgeon, Player patient, HealingInjury ailment) {
         stateManager.setPatientName(surgeon.getUniqueId(), patient.getName());
         stateManager.setPatientUuid(surgeon.getUniqueId(), patient.getUniqueId());
+        stateManager.setSurgeonCharacterId(surgeon.getUniqueId(), Ailments.characterId(surgeon));
+        stateManager.setPatientCharacterId(surgeon.getUniqueId(), Ailments.characterId(patient));
         stateManager.setAilment(surgeon.getUniqueId(), ailment.traitId(), ailment.displayName(),
             procedures.get(ailment.traitId()));
         menuBuilder.buildAndOpenMenu(surgeon);
@@ -108,10 +114,62 @@ public class SurgeryMenuManager {
     // their next move to notice the patient is gone
     // ==============================================
     public void handlePatientQuit(Player patient) {
-        java.util.UUID surgeonId = stateManager.findSurgeonForPatient(patient.getUniqueId());
+        UUID surgeonId = stateManager.findSurgeonForPatient(patient.getUniqueId());
         if (surgeonId == null) {
             return;
         }
+        failForMissingPatient(surgeonId);
+    }
+
+    // ==============================================
+    // Handles a player's active character changing
+    // A surgeon who changes character gives up; a patient who changes
+    // character has left the table, the same as quitting
+    // ==============================================
+    public void handleCharacterActivated(UUID ownerId, String characterId) {
+        if (stateManager.hasSession(ownerId)) {
+            endForSurgeonChange(ownerId);
+        }
+        UUID surgeonId = stateManager.findSurgeonForPatient(ownerId);
+        if (surgeonId != null && !Objects.equals(characterId, stateManager.getPatientCharacterId(surgeonId))) {
+            endForPatientChange(surgeonId);
+        }
+    }
+
+    // ==============================================
+    // Handles a character being permakilled
+    // Ends any operation that character is part of, including when it was
+    // the account's last character and no other character takes over
+    // ==============================================
+    public void handleCharacterPermakilled(UUID ownerId, String characterId) {
+        if (stateManager.hasSession(ownerId) && Objects.equals(characterId, stateManager.getSurgeonCharacterId(ownerId))) {
+            endForSurgeonChange(ownerId);
+        }
+        UUID surgeonId = stateManager.findSurgeonForPatient(ownerId);
+        if (surgeonId != null && Objects.equals(characterId, stateManager.getPatientCharacterId(surgeonId))) {
+            endForPatientChange(surgeonId);
+        }
+    }
+
+    // The surgeon gives up; an unchanged patient still takes the failure penalty
+    private void endForSurgeonChange(UUID surgeonId) {
+        stateManager.markSurgeonChanged(surgeonId);
+        Player surgeon = plugin.getServer().getPlayer(surgeonId);
+        if (surgeon == null) {
+            stateManager.cleanup(surgeonId);
+            return;
+        }
+        completionHandler.handleAbandonment(surgeon);
+        surgeon.closeInventory();
+    }
+
+    // The patient's character is gone, so nothing lands on the account
+    private void endForPatientChange(UUID surgeonId) {
+        stateManager.markPatientChanged(surgeonId);
+        failForMissingPatient(surgeonId);
+    }
+
+    private void failForMissingPatient(UUID surgeonId) {
         Player surgeon = plugin.getServer().getPlayer(surgeonId);
         if (surgeon != null && surgeon.isOnline()) {
             completionHandler.failSurgery(surgeon, uiUpdater.getMessage("failure-patient-left",

@@ -2,6 +2,9 @@ package net.tfminecraft.surgery.procedures;
 
 import net.tfminecraft.rpcharacters.api.HealingInjuries;
 import net.tfminecraft.rpcharacters.api.HealingInjuries.HealingInjury;
+import net.tfminecraft.rpcharacters.managers.PlayerManager;
+import net.tfminecraft.rpcharacters.objects.PlayerData;
+import net.tfminecraft.rpcharacters.objects.RPCharacter;
 import org.bukkit.entity.Player;
 
 import java.util.Comparator;
@@ -40,5 +43,12 @@ public final class Ailments {
     // Returns the new remaining time, or -1 if the ailment is gone
     public static long extend(Player patient, String traitId, long extraMs) {
         return HealingInjuries.extend(patient, traitId, extraMs);
+    }
+
+    // The patient's active character ID, or null without one
+    public static String characterId(Player patient) {
+        PlayerData data = PlayerManager.get(patient);
+        RPCharacter character = data == null ? null : data.getActiveCharacter();
+        return character == null ? null : character.getId();
     }
 }

@@ -1,5 +1,6 @@
 package net.tfminecraft.surgery.managers;
 
+import net.tfminecraft.surgery.procedures.Ailments;
 import net.tfminecraft.surgery.procedures.Complication;
 import net.tfminecraft.surgery.procedures.Procedure;
 import net.tfminecraft.tlibs.objects.api.ItemAPI;
@@ -182,7 +183,8 @@ public class SurgeryMechanicsManager {
     }
 
     // ==============================================
-    // Checks the patient is still online, in the same world, and within range
+    // Checks the patient is still online, alive, the same character, in the
+    // same world, and within range
     // Range gets a configurable multiplier so normal fidgeting doesn't end the surgery
     // ==============================================
     private boolean isPatientPresent(Player surgeon) {
@@ -191,7 +193,10 @@ public class SurgeryMechanicsManager {
             return true;
         }
         Player patient = Bukkit.getPlayer(patientUuid);
-        if (patient == null || !patient.isOnline()) {
+        if (patient == null || !patient.isOnline() || patient.isDead()) {
+            return false;
+        }
+        if (!stateManager.isOriginalPatient(surgeon.getUniqueId(), Ailments.characterId(patient))) {
             return false;
         }
         if (!patient.getWorld().equals(surgeon.getWorld())) {
