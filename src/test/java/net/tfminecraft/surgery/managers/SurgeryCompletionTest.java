@@ -203,6 +203,29 @@ class SurgeryCompletionTest {
     }
 
     @Test
+    void cureAndPenaltyLandOnlyOnTheCharacterOperatedOn() {
+        state.setPatientCharacterId(surgeonId, "original");
+        state.setOperated(surgeonId, true);
+        injuries.when(() -> HealingInjuries.cure(patient, "leg")).thenReturn(true);
+        try (MockedStatic<Ailments> characters = mockStatic(Ailments.class, CALLS_REAL_METHODS)) {
+            characters.when(() -> Ailments.characterId(patient)).thenReturn("other");
+            completion.failSurgery(surgeon, "failed");
+            completion.handleSuccess(surgeon);
+            injuries.verifyNoInteractions();
+            verify(surgeon).sendMessage("ailment-already-healed");
+            verify(patient, never()).sendMessage(anyString());
+
+            state.setPatientUuid(surgeonId, patientId);
+            state.setPatientCharacterId(surgeonId, "original");
+            state.setAilment(surgeonId, "leg", "Broken leg", null);
+            characters.when(() -> Ailments.characterId(patient)).thenReturn("original");
+            completion.handleSuccess(surgeon);
+            injuries.verify(() -> HealingInjuries.cure(patient, "leg"));
+            verify(patient).sendMessage("patient-surgery-successful");
+        }
+    }
+
+    @Test
     void ailmentQueriesSelectWorstAndFindCaseInsensitively() throws Exception {
         HealingInjury shortInjury = new HealingInjury("arm", "Arm", 1_000);
         HealingInjury worst = new HealingInjury("leg", "Leg", 2_000);

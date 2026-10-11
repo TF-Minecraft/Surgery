@@ -7,6 +7,7 @@ import org.bukkit.Sound;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.java.JavaPlugin;
 
+import java.util.Objects;
 import java.util.UUID;
 
 // ==============================================
@@ -185,9 +186,17 @@ public class SurgeryCompletionHandler {
         stateManager.cleanup(playerId);
     }
 
+    // ==============================================
+    // The patient, or null once they have left or switched to another
+    // character, so a cure or penalty never lands on a different character
+    // ==============================================
     private Player patientOf(UUID surgeonId) {
         UUID patientId = stateManager.getPatientUuid(surgeonId);
-        return patientId == null ? null : Bukkit.getPlayer(patientId);
+        Player patient = patientId == null ? null : Bukkit.getPlayer(patientId);
+        if (patient == null || !Objects.equals(stateManager.getPatientCharacterId(surgeonId), Ailments.characterId(patient))) {
+            return null;
+        }
+        return patient;
     }
 
     // ==============================================

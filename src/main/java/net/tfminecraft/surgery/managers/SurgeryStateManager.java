@@ -19,6 +19,8 @@ public class SurgeryStateManager {
     private static class SurgerySession {
         String patientName;
         UUID patientUuid;
+        // The patient's character when the operation began
+        String patientCharacterId;
         String traitId;
         String ailmentName;
         Procedure procedure;
@@ -89,6 +91,7 @@ public class SurgeryStateManager {
     public int getRedTempCounter(UUID playerId) { SurgerySession s = get(playerId); return s == null || s.redTempCounter == null ? 0 : s.redTempCounter; }
     public String getPatientName(UUID playerId) { SurgerySession s = get(playerId); return s == null || s.patientName == null ? "Unknown" : s.patientName; }
     public UUID getPatientUuid(UUID playerId) { SurgerySession s = get(playerId); return s == null ? null : s.patientUuid; }
+    public String getPatientCharacterId(UUID playerId) { SurgerySession s = get(playerId); return s == null ? null : s.patientCharacterId; }
     public boolean hasSession(UUID playerId) { return sessions.containsKey(playerId); }
 
     // ==============================================
@@ -141,6 +144,7 @@ public class SurgeryStateManager {
     public void setRedTempCounter(UUID playerId, int count) { session(playerId).redTempCounter = count; }
     public void setPatientName(UUID playerId, String name) { session(playerId).patientName = name; }
     public void setPatientUuid(UUID playerId, UUID patientUuid) { session(playerId).patientUuid = patientUuid; }
+    public void setPatientCharacterId(UUID playerId, String characterId) { session(playerId).patientCharacterId = characterId; }
     public void removeCollapseCountdown(UUID playerId) { SurgerySession s = get(playerId); if (s != null) { s.collapseCountdown = null; } }
 
     // ==============================================

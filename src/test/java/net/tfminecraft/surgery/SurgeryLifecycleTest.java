@@ -1,6 +1,8 @@
 package net.tfminecraft.surgery;
 
 import net.tfminecraft.rpcharacters.api.HealingInjuries.HealingInjury;
+import net.tfminecraft.rpcharacters.lifecycle.CharacterActivatedEvent;
+import net.tfminecraft.rpcharacters.objects.RPCharacter;
 import net.tfminecraft.surgery.listeners.PlayerListener;
 import net.tfminecraft.surgery.managers.*;
 import net.tfminecraft.tlibs.TLibs;
@@ -121,6 +123,36 @@ class SurgeryLifecycleTest {
         menus.handlePatientQuit(patient);
         assertFalse(state.hasSession(missingSurgeon));
         server.getScheduler().performOneTick();
+    }
+
+    @Test
+    void characterChangeEndsTheOperationForSurgeonOrSwitchedPatient() throws Exception {
+        SurgeryPlugin plugin = MockBukkit.load(SurgeryPlugin.class);
+        SurgeryMenuManager menus = manager(plugin);
+        SurgeryStateManager state = menus.getStateManager();
+        PlayerMock surgeon = server.addPlayer(), patient = server.addPlayer();
+        menus.openSurgeryMenu(surgeon, patient, new HealingInjury("leg", "Leg", 1_000));
+        assertNull(state.getPatientCharacterId(surgeon.getUniqueId()));
+        menus.handleCharacterActivated(patient.getUniqueId(), null);
+        assertTrue(state.hasSession(surgeon.getUniqueId()));
+        menus.handleCharacterActivated(patient.getUniqueId(), "other");
+        assertFalse(state.hasSession(surgeon.getUniqueId()));
+        surgeon.assertSaid(menus.getUiUpdater().getMessage("surgery-failed"));
+        server.getScheduler().performOneTick();
+
+        menus.openSurgeryMenu(surgeon, patient, new HealingInjury("leg", "Leg", 1_000));
+        menus.handleCharacterActivated(surgeon.getUniqueId(), "other");
+        assertFalse(state.hasSession(surgeon.getUniqueId()));
+        assertFalse(menus.isSurgeryMenu(surgeon.getOpenInventory().getTopInventory()));
+        menus.handleCharacterActivated(UUID.randomUUID(), "other");
+        server.getScheduler().performOneTick();
+
+        SurgeryMenuManager mocked = mock(SurgeryMenuManager.class);
+        RPCharacter character = mock(RPCharacter.class);
+        when(character.getId()).thenReturn("next");
+        new PlayerListener(mocked).onCharacterActivated(
+                new CharacterActivatedEvent(patient, patient.getUniqueId(), character, null));
+        verify(mocked).handleCharacterActivated(patient.getUniqueId(), "next");
     }
 
     @Test

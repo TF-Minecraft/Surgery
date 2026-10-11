@@ -8,6 +8,7 @@ import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.inventory.InventoryCloseEvent;
 import org.bukkit.event.inventory.InventoryDragEvent;
 import org.bukkit.inventory.ItemStack;
+import net.tfminecraft.rpcharacters.lifecycle.CharacterActivatedEvent;
 import net.tfminecraft.surgery.managers.SurgeryMenuManager;
 
 public class PlayerListener implements Listener {
@@ -30,6 +31,13 @@ public class PlayerListener implements Listener {
 
         // Pending offers to or from the quitting player can no longer be answered
         menuManager.getRequestManager().forget(event.getPlayer().getUniqueId());
+    }
+
+    @EventHandler
+    public void onCharacterActivated(CharacterActivatedEvent event) {
+        // The operation belongs to the characters who began it; a switch or
+        // permakill ends it before the result can land on another character
+        menuManager.handleCharacterActivated(event.getOwnerUuid(), event.getCharacter().getId());
     }
 
     @EventHandler
