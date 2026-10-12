@@ -16,6 +16,13 @@ public class SurgeryPlugin extends JavaPlugin {
 
     @Override
     public void onEnable() {
+        try {
+            net.tfminecraft.tlibs.character.Characters.available();
+        } catch (LinkageError error) {
+            getLogger().severe("Surgery requires TLibs 2.3.0 or newer. Update TLibs and restart the server.");
+            getServer().getPluginManager().disablePlugin(this);
+            return;
+        }
         instance = this;
 
         saveDefaultConfig();
@@ -45,6 +52,9 @@ public class SurgeryPlugin extends JavaPlugin {
         // the abandonment handler, which tries to schedule a task on a
         // disabling plugin (IllegalPluginAccessException)
         HandlerList.unregisterAll(this);
+        if (surgeryMenuManager != null) {
+            surgeryMenuManager.shutdown();
+        }
 
         // Close open surgery menus. After a reload the holder class comes from
         // a new classloader, so the instanceof check in the listener no longer

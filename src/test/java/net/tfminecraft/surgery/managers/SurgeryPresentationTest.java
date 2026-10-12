@@ -197,6 +197,7 @@ class SurgeryPresentationTest {
         config.set("temperature.rising-temp-max", 104);
         try (MockedStatic<ThreadLocalRandom> randomness = mockStatic(ThreadLocalRandom.class)) {
             randomness.when(ThreadLocalRandom::current).thenReturn(random);
+            state.setPatientName(player.getUniqueId(), "Patient");
             builder.buildAndOpenMenu(player);
             Inventory menu = player.getOpenInventory().getTopInventory();
             assertInstanceOf(SurgeryMenuHolder.class, menu.getHolder());

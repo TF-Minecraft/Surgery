@@ -2,9 +2,14 @@ package net.tfminecraft.surgery.managers;
 
 import net.tfminecraft.surgery.procedures.Ailments;
 import net.tfminecraft.surgery.procedures.Durations;
+import net.tfminecraft.surgery.managers.SurgeryStateManager.Outcome;
+import net.tfminecraft.tlibs.character.CharacterSession;
+import net.tfminecraft.tlibs.character.CharacterSessionEndEvent.Reason;
+import net.tfminecraft.tlibs.character.Characters;
 import org.bukkit.Bukkit;
 import org.bukkit.Sound;
 import org.bukkit.entity.Player;
+import org.bukkit.inventory.Inventory;
 import org.bukkit.plugin.java.JavaPlugin;
 
 import java.util.UUID;
@@ -60,69 +65,92 @@ public class SurgeryCompletionHandler {
         return true;
     }
 
-    // ==============================================
-    // Handles successful surgery completion
-    // ==============================================
     public void handleSuccess(Player surgeon) {
-        UUID surgeonId = surgeon.getUniqueId();
-        String traitId = stateManager.getTraitId(surgeonId);
-        String ailment = stateManager.getAilmentName(surgeonId);
-        Player patient = patientOf(surgeonId);
-
-        // The ailment may have healed on its own while the operation was running.
-        // Do not announce a success the cure did not actually perform.
-        if (patient == null || !Ailments.cure(patient, traitId)) {
-            stateManager.cleanup(surgeonId);
-            closeMenuNextTick(surgeon);
-            surgeon.sendMessage(uiUpdater.getMessage("ailment-already-healed").replace("%ailment%", ailment));
+        Outcome outcome = stateManager.finish(surgeon.getUniqueId());
+        if (outcome == null) {
+            return;
+        }
+        Inventory menu = surgeryMenu(surgeon, outcome);
+        Player patient = currentPatient(outcome);
+        if (!isCurrent(surgeon, outcome.surgeonSession()) || patient == null || outcome.traitId() == null
+                || !Ailments.cure(patient, outcome.traitId())) {
+            closeMenuNextTick(surgeon, outcome, menu);
+            if (isCurrent(surgeon, outcome.surgeonSession())) {
+                surgeon.sendMessage(uiUpdater.getMessage("ailment-already-healed")
+                        .replace("%ailment%", ailmentName(outcome)));
+            }
             return;
         }
 
-        executeCompletionCommand(surgeon, true);
-        stateManager.cleanup(surgeonId);
-        closeMenuNextTick(surgeon);
-
-        surgeon.playSound(surgeon.getLocation(), Sound.UI_TOAST_CHALLENGE_COMPLETE, 1.0f, 1.0f);
-        surgeon.sendMessage(uiUpdater.getMessage("surgery-successful"));
-        surgeon.sendMessage(uiUpdater.getMessage("surgery-successful-subtitle")
-            .replace("%ailment%", ailment).replace("%patient%", patient.getName()));
-        patient.sendMessage(uiUpdater.getMessage("patient-surgery-successful")
-            .replace("%ailment%", ailment).replace("%surgeon%", surgeon.getName()));
-    }
-
-    // ==============================================
-    // Fails the surgery with a message
-    // ==============================================
-    public void failSurgery(Player surgeon, String message) {
-        UUID surgeonId = surgeon.getUniqueId();
-
-        // Check if player is actually in surgery (prevent duplicate messages)
-        if (!stateManager.hasSession(surgeonId)) { return; }
-
-        executeCompletionCommand(surgeon, false);
-        // Only a patient who was actually sedated or cut is left worse off
-        String extra = stateManager.hasOperated(surgeonId) ? lengthenHealing(surgeon) : null;
-
-        stateManager.cleanup(surgeonId);
-
-        closeMenuNextTick(surgeon);
-        surgeon.playSound(surgeon.getLocation(), Sound.ENTITY_WITHER_DEATH, 1.0f, 0.8f);
-        surgeon.sendMessage(uiUpdater.getMessage("surgery-failed"));
-        surgeon.sendMessage(message);
-        if (extra != null) {
-            surgeon.sendMessage(uiUpdater.getMessage("surgery-failed-penalty").replace("%extra%", extra));
+        executeCompletionCommand(surgeon, outcome, true);
+        closeMenuNextTick(surgeon, outcome, menu);
+        if (isCurrent(surgeon, outcome.surgeonSession())) {
+            surgeon.playSound(surgeon.getLocation(), Sound.UI_TOAST_CHALLENGE_COMPLETE, 1.0f, 1.0f);
+            surgeon.sendMessage(uiUpdater.getMessage("surgery-successful"));
+            surgeon.sendMessage(uiUpdater.getMessage("surgery-successful-subtitle")
+                    .replace("%ailment%", ailmentName(outcome)).replace("%patient%", patientName(outcome)));
+        }
+        if (isCurrent(patient, outcome.patientSession())) {
+            patient.sendMessage(uiUpdater.getMessage("patient-surgery-successful")
+                    .replace("%ailment%", ailmentName(outcome)).replace("%surgeon%", surgeon.getName()));
         }
     }
 
-    // ==============================================
-    // Adds the failure penalty to the patient's healing time
-    // Returns the added time for messages, or null if nothing was added
-    // ==============================================
-    private String lengthenHealing(Player surgeon) {
+    public void failSurgery(Player surgeon, String message) {
+        Outcome outcome = stateManager.finish(surgeon.getUniqueId());
+        if (outcome == null) {
+            return;
+        }
+        Inventory menu = surgeryMenu(surgeon, outcome);
+        String extra = outcome.operated() ? lengthenHealing(outcome, null) : null;
+        executeCompletionCommand(surgeon, outcome, false);
+        closeMenuNextTick(surgeon, outcome, menu);
+        reportFailure(surgeon, outcome, message, extra);
+    }
+
+    public void handleAbandonment(Player surgeon) {
+        if (stateManager.hasOperated(surgeon.getUniqueId())) {
+            failSurgery(surgeon, uiUpdater.getMessage("failure-gave-up"));
+            return;
+        }
+        Outcome outcome = stateManager.finish(surgeon.getUniqueId());
+        if (outcome != null && isCurrent(surgeon, outcome.surgeonSession())) {
+            surgeon.sendMessage(uiUpdater.getMessage("surgery-cancelled"));
+        }
+    }
+
+    /** Ends only the operation involving this exact outgoing session. */
+    public void handleEnd(Player surgeon, CharacterSession ending, Reason reason) {
         UUID surgeonId = surgeon.getUniqueId();
-        Player patient = patientOf(surgeonId);
-        String traitId = stateManager.getTraitId(surgeonId);
-        if (patient == null || traitId == null) {
+        if (ending == null || (!ending.equals(stateManager.getSurgeonSession(surgeonId))
+                && !ending.equals(stateManager.getPatientSession(surgeonId)))) {
+            return;
+        }
+        Outcome outcome = stateManager.finish(surgeonId);
+        if (outcome == null || reason == Reason.SHUTDOWN) {
+            return;
+        }
+        Inventory menu = surgeryMenu(surgeon, outcome);
+        boolean patientEnded = ending.equals(outcome.patientSession());
+        String extra = null;
+        if (outcome.operated() && (!patientEnded || reason == Reason.QUIT)) {
+            extra = lengthenHealing(outcome, patientEnded ? ending : null);
+        }
+        // Account-named commands never cross a session-end boundary.
+        closeMenuNextTick(surgeon, outcome, menu);
+        reportFailure(surgeon, outcome, uiUpdater.getMessage(patientEnded ? "failure-patient-left" : "failure-gave-up"), extra);
+    }
+
+    private String lengthenHealing(Outcome outcome, CharacterSession quittingPatient) {
+        Player patient = currentPatient(outcome);
+        if (quittingPatient != null && quittingPatient.equals(outcome.patientSession())) {
+            patient = Bukkit.getPlayer(quittingPatient.ref().ownerId());
+            // During QUIT the outgoing body is still loaded, but its session is already invalid.
+            if (patient == null || !patient.isOnline() || Characters.currentSession(patient).isPresent()) {
+                return null;
+            }
+        }
+        if (patient == null || outcome.traitId() == null) {
             return null;
         }
         long penalty = Durations.parseMs(plugin.getConfig().getString("failure-healing-penalty", "12h"));
@@ -133,109 +161,83 @@ public class SurgeryCompletionHandler {
         if (penalty == 0L) {
             return null;
         }
-        long remaining = Ailments.extend(patient, traitId, penalty);
+        long remaining = Ailments.extend(patient, outcome.traitId(), penalty);
         if (remaining < 0L) {
             return null;
         }
         String extra = Durations.formatHours(penalty);
-        patient.sendMessage(uiUpdater.getMessage("patient-surgery-failed")
-            .replace("%ailment%", stateManager.getAilmentName(surgeonId))
-            .replace("%extra%", extra)
-            .replace("%remaining%", Durations.formatHours(remaining)));
+        if (isCurrent(patient, outcome.patientSession())) {
+            patient.sendMessage(uiUpdater.getMessage("patient-surgery-failed")
+                    .replace("%ailment%", ailmentName(outcome))
+                    .replace("%extra%", extra)
+                    .replace("%remaining%", Durations.formatHours(remaining)));
+        }
         return extra;
     }
 
-    // ==============================================
-    // Closes the menu on the next tick; calling closeInventory directly inside
-    // an InventoryClickEvent handler is undefined behavior per the Bukkit docs
-    // ==============================================
-    private void closeMenuNextTick(Player player) {
-        Bukkit.getScheduler().runTask(plugin, (Runnable) player::closeInventory);
-    }
-
-    // ==============================================
-    // Handles the surgeon closing the menu before finishing
-    // Stopping before the patient is sedated or cut does no harm; after that, the surgery fails
-    // ==============================================
-    public void handleAbandonment(Player player) {
-        UUID playerId = player.getUniqueId();
-        if (!stateManager.hasSession(playerId)) {
+    private void reportFailure(Player surgeon, Outcome outcome, String message, String extra) {
+        if (!isCurrent(surgeon, outcome.surgeonSession())) {
             return;
         }
-        if (stateManager.hasOperated(playerId)) {
-            failSurgery(player, uiUpdater.getMessage("failure-gave-up"));
-        } else {
-            stateManager.cleanup(playerId);
-            player.sendMessage(uiUpdater.getMessage("surgery-cancelled"));
+        surgeon.playSound(surgeon.getLocation(), Sound.ENTITY_WITHER_DEATH, 1.0f, 0.8f);
+        surgeon.sendMessage(uiUpdater.getMessage("surgery-failed"));
+        surgeon.sendMessage(message);
+        if (extra != null) {
+            surgeon.sendMessage(uiUpdater.getMessage("surgery-failed-penalty").replace("%extra%", extra));
         }
     }
 
-    // ==============================================
-    // Handles the surgeon disconnecting mid-surgery
-    // Runs the failure command and penalty once treatment has begun (no
-    // free escape by logging out) but skips the surgeon's messages, sounds, and
-    // menu close, which are pointless for a quitting player
-    // ==============================================
-    public void handleQuit(Player player) {
-        UUID playerId = player.getUniqueId();
-        if (stateManager.hasOperated(playerId)) {
-            executeCompletionCommand(player, false);
-            lengthenHealing(player);
-        }
-        stateManager.cleanup(playerId);
+    private Inventory surgeryMenu(Player surgeon, Outcome outcome) {
+        Inventory menu = surgeon.getOpenInventory().getTopInventory();
+        return menu.getHolder() instanceof SurgeryMenuHolder holder && holder.matches(surgeon, outcome.operationId())
+                ? menu : null;
     }
 
-    // ==============================================
-    // The patient, or null once they have left or their character was
-    // switched away or permakilled, so a cure or penalty never lands on
-    // a different character
-    // ==============================================
-    private Player patientOf(UUID surgeonId) {
-        UUID patientId = stateManager.getPatientUuid(surgeonId);
-        Player patient = patientId == null ? null : Bukkit.getPlayer(patientId);
-        if (patient == null || !stateManager.isOriginalPatient(surgeonId, Ailments.characterId(patient))) {
+    /** Defer closing out of click handlers, retaining the exact operation's inventory and actor. */
+    private void closeMenuNextTick(Player surgeon, Outcome outcome, Inventory menu) {
+        if (menu == null || !plugin.isEnabled() || !isCurrent(surgeon, outcome.surgeonSession())) {
+            return;
+        }
+        Bukkit.getScheduler().runTask(plugin, () -> {
+            if (plugin.isEnabled() && isCurrent(surgeon, outcome.surgeonSession())
+                    && surgeon.getOpenInventory().getTopInventory() == menu) {
+                surgeon.closeInventory();
+            }
+        });
+    }
+
+    private Player currentPatient(Outcome outcome) {
+        CharacterSession token = outcome.patientSession();
+        if (token == null) {
             return null;
         }
-        return patient;
+        Player patient = Bukkit.getPlayer(token.ref().ownerId());
+        return patient != null && isCurrent(patient, token) ? patient : null;
     }
 
-    // ==============================================
-    // Whether both participants are still the characters the operation began
-    // on; a patient who logged off counts as unchanged
-    // ==============================================
-    private boolean sameCharacters(Player surgeon) {
-        UUID surgeonId = surgeon.getUniqueId();
-        if (!stateManager.isOriginalSurgeon(surgeonId, Ailments.characterId(surgeon))) {
-            return false;
-        }
-        UUID patientId = stateManager.getPatientUuid(surgeonId);
-        Player patient = patientId == null ? null : Bukkit.getPlayer(patientId);
-        return patient == null
-            ? !stateManager.hasPatientChanged(surgeonId)
-            : stateManager.isOriginalPatient(surgeonId, Ailments.characterId(patient));
+    private boolean isCurrent(Player player, CharacterSession token) {
+        return token != null && token.ref().ownerId().equals(player.getUniqueId()) && player.isOnline()
+                && Bukkit.getPlayer(player.getUniqueId()) == player && Characters.isCurrent(token);
     }
 
-    // ==============================================
-    // Executes the configured command for surgery completion (success or failure)
-    // Commands name accounts, so they are skipped once either participant has
-    // changed character; they would land on whoever is now active
-    // ==============================================
-    private void executeCompletionCommand(Player surgeon, boolean success) {
-        UUID surgeonId = surgeon.getUniqueId();
-        if (!sameCharacters(surgeon)) {
+    private void executeCompletionCommand(Player surgeon, Outcome outcome, boolean success) {
+        if (!isCurrent(surgeon, outcome.surgeonSession()) || currentPatient(outcome) == null) {
             return;
         }
-        String patientName = stateManager.getPatientName(surgeonId);
-
-        String configKey = success ? "commands.surgery-success" : "commands.surgery-failure";
-        String command = plugin.getConfig().getString(configKey, "");
-
+        String key = success ? "commands.surgery-success" : "commands.surgery-failure";
+        String command = plugin.getConfig().getString(key, "");
         if (command != null && !command.isEmpty()) {
-            command = command.replace("%surgeon%", surgeon.getName());
-            command = command.replace("%player%", patientName);
-            command = command.replace("%ailment%", stateManager.getAilmentName(surgeonId));
-
+            command = command.replace("%surgeon%", surgeon.getName())
+                    .replace("%player%", patientName(outcome)).replace("%ailment%", ailmentName(outcome));
             Bukkit.dispatchCommand(Bukkit.getConsoleSender(), command);
         }
+    }
+
+    private String patientName(Outcome outcome) {
+        return outcome.patientName() == null ? "Unknown" : outcome.patientName();
+    }
+
+    private String ailmentName(Outcome outcome) {
+        return outcome.ailmentName() == null ? "Unknown ailment" : outcome.ailmentName();
     }
 }

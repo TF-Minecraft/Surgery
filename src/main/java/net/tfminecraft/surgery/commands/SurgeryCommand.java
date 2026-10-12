@@ -9,6 +9,8 @@ import net.tfminecraft.surgery.managers.SurgeryRequestManager;
 import net.tfminecraft.surgery.managers.SurgeryUIUpdater;
 import net.tfminecraft.surgery.procedures.Ailments;
 import net.tfminecraft.surgery.procedures.Durations;
+import net.tfminecraft.tlibs.character.CharacterSession;
+import net.tfminecraft.tlibs.character.Characters;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.command.Command;
@@ -71,7 +73,9 @@ public class SurgeryCommand implements TabExecutor {
             surgeon.sendMessage(uiUpdater.getMessage("command-player-not-found", "&cPlayer not found or not online!"));
             return;
         }
-        if (!checkCanStart(surgeon, patient)) {
+        CharacterSession surgeonSession = Characters.currentSession(surgeon).orElse(null);
+        CharacterSession patientSession = Characters.currentSession(patient).orElse(null);
+        if (!checkCanStart(surgeon, patient, surgeonSession, patientSession)) {
             return;
         }
 
@@ -88,7 +92,7 @@ public class SurgeryCommand implements TabExecutor {
         }
 
         int timeoutSeconds = Math.max(10, plugin.getConfig().getInt("request-timeout-seconds", 60));
-        requests.offer(patient.getUniqueId(), surgeon.getUniqueId(), ailment.traitId(),
+        requests.offer(patientSession, surgeonSession, ailment.traitId(),
             now + timeoutSeconds * 1000L);
 
         String ailmentName = ChatColor.stripColor(ailment.displayName());
@@ -125,7 +129,7 @@ public class SurgeryCommand implements TabExecutor {
             patient.sendMessage(uiUpdater.getMessage("request-surgeon-gone"));
             return;
         }
-        if (!checkCanStart(surgeon, patient)) {
+        if (!checkCanStart(surgeon, patient, request.surgeonSession(), request.patientSession())) {
             patient.sendMessage(uiUpdater.getMessage("request-cannot-start").replace("%surgeon%", surgeon.getName()));
             return;
         }
@@ -162,7 +166,14 @@ public class SurgeryCommand implements TabExecutor {
     // ==============================================
     // Checks shared by offering and accepting; messages the surgeon on failure
     // ==============================================
-    private boolean checkCanStart(Player surgeon, Player patient) {
+    private boolean checkCanStart(Player surgeon, Player patient,
+                                  CharacterSession surgeonSession, CharacterSession patientSession) {
+        if (surgeonSession == null || patientSession == null
+                || !Characters.isCurrent(surgeonSession) || !Characters.isCurrent(patientSession)) {
+            surgeon.sendMessage(uiUpdater.getMessage("command-character-required",
+                "&cBoth characters must be ready before surgery."));
+            return false;
+        }
         // Block re-entry: opening a second menu fires the old menu's close event,
         // which fails the surgery and wipes the freshly initialized session
         if (menuManager.getStateManager().hasSession(surgeon.getUniqueId())) {

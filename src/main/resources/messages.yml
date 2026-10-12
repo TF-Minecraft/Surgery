@@ -263,3 +263,5 @@ skill-fail-transfusion:
   - "The brass syringe jammed."
   - "The needle came out of the vein."
   - "You drew blood out instead of putting it in!"
+
+command-character-required: "&cBoth characters must be ready before surgery."

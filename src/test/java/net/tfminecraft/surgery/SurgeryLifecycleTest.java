@@ -1,27 +1,30 @@
 package net.tfminecraft.surgery;
 
 import net.tfminecraft.rpcharacters.api.HealingInjuries.HealingInjury;
-import net.tfminecraft.rpcharacters.lifecycle.CharacterActivatedEvent;
-import net.tfminecraft.rpcharacters.objects.RPCharacter;
-import net.tfminecraft.rpcharacters.permadeath.CharacterPermakillEvent;
-import net.tfminecraft.rpcharacters.permadeath.PermakillCause;
 import net.tfminecraft.surgery.listeners.PlayerListener;
 import net.tfminecraft.surgery.managers.*;
 import net.tfminecraft.surgery.procedures.Ailments;
 import net.tfminecraft.tlibs.TLibs;
+import net.tfminecraft.tlibs.character.CharacterSession;
+import net.tfminecraft.tlibs.character.CharacterSessionEndEvent;
+import net.tfminecraft.tlibs.character.CharacterSessionEndEvent.Reason;
+import net.tfminecraft.tlibs.character.Characters;
 import net.tfminecraft.tlibs.objects.api.ItemAPI;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
+import org.bukkit.event.HandlerList;
 import org.bukkit.event.inventory.*;
-import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.mockbukkit.mockbukkit.MockBukkit;
 import org.mockbukkit.mockbukkit.ServerMock;
 import org.mockbukkit.mockbukkit.entity.PlayerMock;
@@ -35,12 +38,14 @@ import static org.mockito.Mockito.*;
 class SurgeryLifecycleTest {
     private ServerMock server;
     private MockedStatic<TLibs> tlibs;
+    private TestCharacters characters;
 
     @BeforeEach
     void setUp() {
         server = MockBukkit.mock();
         MockBukkit.createMockPlugin("TLibs");
         MockBukkit.createMockPlugin("RPCharacters");
+        characters = new TestCharacters();
         ItemAPI api = mock(ItemAPI.class, RETURNS_DEEP_STUBS);
         when(api.getCreator().getItemFromPath(anyString())).thenReturn(new ItemStack(Material.PAPER));
         tlibs = mockStatic(TLibs.class);
@@ -50,11 +55,12 @@ class SurgeryLifecycleTest {
     @AfterEach
     void tearDown() throws Exception {
         try {
-            // MockBukkit leaves the top inventory null after closeInventory;
-            // the live server restores the player's crafting inventory.
+            if (SurgeryPlugin.getInstance() != null) HandlerList.unregisterAll(SurgeryPlugin.getInstance());
+            // Restore MockBukkit's null post-close top inventories before plugin shutdown.
             for (Player player : server.getOnlinePlayers()) {
                 player.openInventory(server.createInventory(null, 9));
             }
+            characters.close();
             MockBukkit.unmock();
         } finally {
             if (tlibs != null) tlibs.close();
@@ -70,8 +76,18 @@ class SurgeryLifecycleTest {
         return (SurgeryMenuManager) field.get(plugin);
     }
 
+    private PlayerMock readyPlayer() {
+        PlayerMock player = server.addPlayer();
+        characters.activate(player);
+        return player;
+    }
+
+    private void open(SurgeryMenuManager menus, Player surgeon, Player patient) {
+        menus.openSurgeryMenu(surgeon, patient, new HealingInjury("leg", "Leg", 1_000));
+    }
+
     @Test
-    void enablesManagersRegistersCommandAndClosesOnlySurgeryMenusOnShutdown() throws Exception {
+    void enablesManagersRegistersCommandAndClearsOperationsAndOffersOnShutdown() throws Exception {
         SurgeryPlugin plugin = MockBukkit.load(SurgeryPlugin.class);
         assertSame(plugin, SurgeryPlugin.getInstance());
         assertTrue(plugin.isEnabled());
@@ -85,149 +101,186 @@ class SurgeryLifecycleTest {
         assertNotNull(menus.getCompletionHandler());
         assertNotNull(menus.getMechanicsManager());
         assertNotNull(menus.getItemHandler());
-        PlayerMock surgeon = server.addPlayer(), patient = server.addPlayer(), other = server.addPlayer();
+        PlayerMock surgeon = readyPlayer(), patient = readyPlayer(), other = readyPlayer();
         patient.openInventory(server.createInventory(null, 9));
         Inventory ordinary = server.createInventory(null, 9);
         other.openInventory(ordinary);
-        menus.openSurgeryMenu(surgeon, patient, new HealingInjury("leg", "Leg", 1_000));
+        open(menus, surgeon, patient);
+        CharacterSession surgeonSession = Characters.currentSession(surgeon).orElseThrow();
+        CharacterSession otherSession = Characters.currentSession(other).orElseThrow();
+        menus.getRequestManager().offer(otherSession, surgeonSession, "arm", Long.MAX_VALUE);
         assertEquals(patient.getUniqueId(), menus.getStateManager().getPatientUuid(surgeon.getUniqueId()));
         assertEquals("leg", menus.getStateManager().getTraitId(surgeon.getUniqueId()));
-        assertTrue(menus.isSurgeryMenu(surgeon.getOpenInventory().getTopInventory()));
+        Inventory surgery = surgeon.getOpenInventory().getTopInventory();
+        assertTrue(menus.isSurgeryMenu(surgery));
         assertFalse(menus.isSurgeryMenu(null));
         assertFalse(menus.isSurgeryMenu(ordinary));
-        menus.handleItemClick(surgeon, null, 0);
+        menus.handleItemClick(surgeon, surgery, null, 0);
         plugin.onDisable();
         assertFalse(menus.isSurgeryMenu(surgeon.getOpenInventory().getTopInventory()));
         assertSame(ordinary, other.getOpenInventory().getTopInventory());
+        assertFalse(menus.getStateManager().hasSession(surgeon.getUniqueId()));
+        assertNull(menus.getRequestManager().pending(other.getUniqueId(), 0));
     }
 
     @Test
-    void missingSharedApiDisablesPluginBeforeCommandRegistration() {
+    void missingCharacterApiDisablesBeforeInitializationWithAnUpgradeMessage() {
+        SurgeryPlugin startup = mock(SurgeryPlugin.class);
+        org.bukkit.Server startupServer = mock(org.bukkit.Server.class);
+        org.bukkit.plugin.PluginManager plugins = mock(org.bukkit.plugin.PluginManager.class);
+        java.util.logging.Logger logger = mock(java.util.logging.Logger.class);
+        when(startup.getServer()).thenReturn(startupServer);
+        when(startupServer.getPluginManager()).thenReturn(plugins);
+        when(startup.getLogger()).thenReturn(logger);
+        doCallRealMethod().when(startup).onEnable();
+        try (var unavailable = mockStatic(Characters.class)) {
+            unavailable.when(Characters::available).thenThrow(new NoClassDefFoundError("CharacterIdentity"));
+            startup.onEnable();
+            verify(plugins).disablePlugin(startup);
+            verify(logger).severe("Surgery requires TLibs 2.3.0 or newer. Update TLibs and restart the server.");
+            verify(startup, never()).saveDefaultConfig();
+            verify(startup, never()).getCommand(anyString());
+        }
+    }
+
+    @Test
+    void missingSharedItemApiDisablesPluginBeforeCommandRegistration() {
         tlibs.when(TLibs::getItemAPI).thenReturn(null);
         SurgeryPlugin plugin = MockBukkit.load(SurgeryPlugin.class);
         assertFalse(plugin.isEnabled());
     }
 
     @Test
-    void managerDelegatesAbandonmentAndDisconnectsWithoutLeakingSessions() throws Exception {
+    void menusWaitForBothReadyCharactersAndNeverUseProviderAbsenceAsReadiness() throws Exception {
         SurgeryPlugin plugin = MockBukkit.load(SurgeryPlugin.class);
         SurgeryMenuManager menus = manager(plugin);
-        SurgeryStateManager state = menus.getStateManager();
         PlayerMock surgeon = server.addPlayer(), patient = server.addPlayer();
-        menus.handlePatientQuit(patient);
-        state.setPatientName(surgeon.getUniqueId(), "Patient");
-        menus.handleSurgeryAbandonment(surgeon);
-        assertFalse(state.hasSession(surgeon.getUniqueId()));
-        state.setPatientName(surgeon.getUniqueId(), "Patient");
-        menus.handleSurgeonQuit(surgeon);
-        assertFalse(state.hasSession(surgeon.getUniqueId()));
-        state.setPatientUuid(surgeon.getUniqueId(), patient.getUniqueId());
-        menus.handlePatientQuit(patient);
-        assertFalse(state.hasSession(surgeon.getUniqueId()));
-        UUID missingSurgeon = UUID.randomUUID();
-        state.setPatientUuid(missingSurgeon, patient.getUniqueId());
-        menus.handlePatientQuit(patient);
-        assertFalse(state.hasSession(missingSurgeon));
-        server.getScheduler().performOneTick();
+        assertTrue(plugin.isEnabled());
+        open(menus, surgeon, patient);
+        assertFalse(menus.getStateManager().hasSession(surgeon.getUniqueId()));
+        characters.activate(surgeon);
+        open(menus, surgeon, patient);
+        assertFalse(menus.getStateManager().hasSession(surgeon.getUniqueId()));
+        characters.activate(patient);
+        characters.unregister();
+        open(menus, surgeon, patient);
+        assertFalse(menus.getStateManager().hasSession(surgeon.getUniqueId()));
     }
 
-    @Test
-    void characterChangeEndsTheOperationForSurgeonOrSwitchedPatient() throws Exception {
-        SurgeryPlugin plugin = MockBukkit.load(SurgeryPlugin.class);
-        SurgeryMenuManager menus = manager(plugin);
-        SurgeryStateManager state = menus.getStateManager();
-        PlayerMock surgeon = server.addPlayer(), patient = server.addPlayer();
-        menus.openSurgeryMenu(surgeon, patient, new HealingInjury("leg", "Leg", 1_000));
-        assertNull(state.getPatientCharacterId(surgeon.getUniqueId()));
-        menus.handleCharacterActivated(patient.getUniqueId(), null);
-        assertTrue(state.hasSession(surgeon.getUniqueId()));
-        menus.handleCharacterActivated(patient.getUniqueId(), "other");
-        assertFalse(state.hasSession(surgeon.getUniqueId()));
-        surgeon.assertSaid(menus.getUiUpdater().getMessage("surgery-failed"));
-        server.getScheduler().performOneTick();
-
-        menus.openSurgeryMenu(surgeon, patient, new HealingInjury("leg", "Leg", 1_000));
-        menus.handleCharacterActivated(surgeon.getUniqueId(), "other");
-        assertFalse(state.hasSession(surgeon.getUniqueId()));
-        assertFalse(menus.isSurgeryMenu(surgeon.getOpenInventory().getTopInventory()));
-        UUID offlineSurgeon = UUID.randomUUID();
-        state.setPatientName(offlineSurgeon, "Patient");
-        menus.handleCharacterActivated(offlineSurgeon, "other");
-        assertFalse(state.hasSession(offlineSurgeon));
-        server.getScheduler().performOneTick();
-
-        SurgeryMenuManager mocked = mock(SurgeryMenuManager.class);
-        RPCharacter character = mock(RPCharacter.class);
-        when(character.getId()).thenReturn("next");
-        new PlayerListener(mocked).onCharacterActivated(
-                new CharacterActivatedEvent(patient, patient.getUniqueId(), character, null));
-        verify(mocked).handleCharacterActivated(patient.getUniqueId(), "next");
-    }
-
-    private CharacterPermakillEvent permakill(Player player, String characterId) {
-        RPCharacter character = mock(RPCharacter.class);
-        when(character.getId()).thenReturn(characterId);
-        return new CharacterPermakillEvent(player, character, PermakillCause.OTHER);
-    }
-
-    @Test
-    void permakillEndsOnlyTheDyingCharactersOperation() throws Exception {
+    @ParameterizedTest
+    @CsvSource({"patient,QUIT,true", "patient,SWITCH,false", "patient,DEATH,false", "patient,SHUTDOWN,false",
+            "surgeon,QUIT,true", "surgeon,SWITCH,true", "surgeon,DEATH,true", "surgeon,SHUTDOWN,false"})
+    void sessionEndUsesOutgoingIdentityAndAppliesOnlyTheAllowedPenalty(String participant, Reason reason,
+                                                                      boolean penalized) throws Exception {
         SurgeryPlugin plugin = MockBukkit.load(SurgeryPlugin.class);
         plugin.getConfig().set("commands.surgery-failure", "damage %player% 1");
         SurgeryMenuManager menus = manager(plugin);
-        SurgeryStateManager state = menus.getStateManager();
-        PlayerMock surgeon = server.addPlayer(), patient = server.addPlayer();
-        UUID surgeonId = surgeon.getUniqueId();
-        HealingInjury leg = new HealingInjury("leg", "Leg", 1_000);
-        try (MockedStatic<Ailments> ailments = mockStatic(Ailments.class, CALLS_REAL_METHODS);
+        PlayerMock surgeon = readyPlayer(), patient = readyPlayer();
+        try (MockedStatic<Ailments> ailments = mockStatic(Ailments.class);
              MockedStatic<Bukkit> bukkit = mockStatic(Bukkit.class, CALLS_REAL_METHODS)) {
-            ailments.when(() -> Ailments.characterId(patient)).thenReturn("patient");
-            ailments.when(() -> Ailments.characterId(surgeon)).thenReturn("doctor");
             ailments.when(() -> Ailments.extend(any(), anyString(), anyLong())).thenReturn(1L);
-            menus.openSurgeryMenu(surgeon, patient, leg);
-            assertEquals("doctor", state.getSurgeonCharacterId(surgeonId));
-            state.setOperated(surgeonId, true);
-
-            // Another of the patient's characters dying leaves the operation alone
-            server.getPluginManager().callEvent(permakill(patient, "spare"));
-            CharacterPermakillEvent cancelled = permakill(patient, "patient");
-            cancelled.setCancelled(true);
-            server.getPluginManager().callEvent(cancelled);
-            assertTrue(state.hasSession(surgeonId));
-
-            // The patient's last character dies and nobody takes over
-            server.getPluginManager().callEvent(permakill(patient, "patient"));
-            assertFalse(state.hasSession(surgeonId));
-            surgeon.assertSaid(menus.getUiUpdater().getMessage("surgery-failed"));
-            ailments.verify(() -> Ailments.extend(any(), anyString(), anyLong()), never());
-            server.getScheduler().performOneTick();
-
-            // The surgeon dies; the unchanged patient still takes the penalty
-            menus.openSurgeryMenu(surgeon, patient, leg);
-            state.setOperated(surgeonId, true);
-            server.getPluginManager().callEvent(permakill(surgeon, "doctor"));
-            assertFalse(state.hasSession(surgeonId));
-            ailments.verify(() -> Ailments.extend(patient, "leg", 12 * 3_600_000L));
+            open(menus, surgeon, patient);
+            menus.getStateManager().setOperated(surgeon.getUniqueId(), true);
+            Player endingPlayer = participant.equals("patient") ? patient : surgeon;
+            CharacterSession ending = characters.invalidate(endingPlayer);
+            assertFalse(Characters.isCurrent(ending));
+            CharacterSessionEndEvent event = new CharacterSessionEndEvent(endingPlayer, ending, reason);
+            server.getPluginManager().callEvent(event);
+            assertFalse(menus.getStateManager().hasSession(surgeon.getUniqueId()));
+            assertFalse(menus.isSurgeryMenu(surgeon.getOpenInventory().getTopInventory()));
+            // Duplicate delivery must not apply another penalty.
+            server.getPluginManager().callEvent(event);
+            ailments.verify(() -> Ailments.extend(patient, "leg", 12 * 3_600_000L), times(penalized ? 1 : 0));
             bukkit.verify(() -> Bukkit.dispatchCommand(any(), anyString()), never());
             server.getScheduler().performOneTick();
         }
     }
 
+    @ParameterizedTest
+    @ValueSource(strings = {"patient", "surgeon"})
+    void lateOldEndCannotRemoveNewOperationOrNewConsentAfterSwitchingBack(String participant) throws Exception {
+        SurgeryPlugin plugin = MockBukkit.load(SurgeryPlugin.class);
+        SurgeryMenuManager menus = manager(plugin);
+        PlayerMock surgeon = readyPlayer(), patient = readyPlayer();
+        open(menus, surgeon, patient);
+        Player actor = participant.equals("patient") ? patient : surgeon;
+        CharacterSession original = characters.invalidate(actor);
+        CharacterSessionEndEvent oldEnd = new CharacterSessionEndEvent(actor, original, Reason.SWITCH);
+        server.getPluginManager().callEvent(oldEnd);
+        characters.activate(actor);
+        characters.activate(actor, original.ref().characterId());
+        open(menus, surgeon, patient);
+        long operation = menus.getStateManager().getOperationId(surgeon.getUniqueId());
+        Inventory currentMenu = surgeon.getOpenInventory().getTopInventory();
+        menus.getRequestManager().offer(Characters.currentSession(patient).orElseThrow(),
+                Characters.currentSession(surgeon).orElseThrow(), "arm", Long.MAX_VALUE);
+        SurgeryRequestManager.Request request = menus.getRequestManager().pending(patient.getUniqueId(), 0);
+        assertNotNull(request);
+        server.getPluginManager().callEvent(oldEnd);
+        server.getScheduler().performOneTick();
+        assertEquals(operation, menus.getStateManager().getOperationId(surgeon.getUniqueId()));
+        assertSame(currentMenu, surgeon.getOpenInventory().getTopInventory());
+        assertSame(request, menus.getRequestManager().pending(patient.getUniqueId(), 0));
+    }
+
     @Test
-    void quitRunsBeforeRPCharactersUnloadsTheCharacter() throws Exception {
-        EventHandler handler = PlayerListener.class.getMethod("onPlayerQuit", PlayerQuitEvent.class)
+    void staleOrForeignMenusCannotClickOrAbandonTheReplacementOperation() throws Exception {
+        SurgeryPlugin plugin = MockBukkit.load(SurgeryPlugin.class);
+        SurgeryMenuManager menus = manager(plugin);
+        PlayerMock surgeon = readyPlayer(), patient = readyPlayer(), stranger = readyPlayer();
+        open(menus, surgeon, patient);
+        Inventory oldMenu = surgeon.getOpenInventory().getTopInventory();
+        menus.handleSurgeryAbandonment(surgeon, oldMenu);
+        open(menus, surgeon, patient);
+        Inventory currentMenu = surgeon.getOpenInventory().getTopInventory();
+        long operation = menus.getStateManager().getOperationId(surgeon.getUniqueId());
+        menus.handleSurgeryAbandonment(surgeon, oldMenu);
+        menus.handleItemClick(surgeon, oldMenu, new ItemStack(Material.PAPER), SurgeryTool.SCALPEL.getSlot());
+        menus.handleSurgeryAbandonment(stranger, currentMenu);
+        menus.handleItemClick(surgeon, server.createInventory(null, 9), new ItemStack(Material.PAPER), 0);
+        assertEquals(operation, menus.getStateManager().getOperationId(surgeon.getUniqueId()));
+        assertFalse(menus.getStateManager().hasOperated(surgeon.getUniqueId()));
+        assertSame(currentMenu, surgeon.getOpenInventory().getTopInventory());
+        // Neither duplicate opens nor a second surgeon may replace the operation.
+        open(menus, surgeon, patient);
+        open(menus, stranger, patient);
+        assertEquals(operation, menus.getStateManager().getOperationId(surgeon.getUniqueId()));
+        assertFalse(menus.getStateManager().hasSession(stranger.getUniqueId()));
+        menus.handleSurgeryAbandonment(surgeon, currentMenu);
+        assertFalse(menus.getStateManager().hasSession(surgeon.getUniqueId()));
+    }
+
+    @Test
+    void patientEndCleansAnOperationWhoseSurgeonIsAlreadyAbsent() throws Exception {
+        SurgeryPlugin plugin = MockBukkit.load(SurgeryPlugin.class);
+        SurgeryMenuManager menus = manager(plugin);
+        PlayerMock patient = readyPlayer();
+        UUID surgeonId = UUID.randomUUID();
+        CharacterSession ending = characters.invalidate(patient);
+        menus.getStateManager().setPatientUuid(surgeonId, patient.getUniqueId());
+        menus.getStateManager().setPatientSession(surgeonId, ending);
+        server.getPluginManager().callEvent(new CharacterSessionEndEvent(patient, ending, Reason.QUIT));
+        assertFalse(menus.getStateManager().hasSession(surgeonId));
+    }
+
+    @Test
+    void sessionEndListenerRunsBeforeOtherCleanupAndRoutesTheExactEvent() throws Exception {
+        EventHandler handler = PlayerListener.class.getMethod("onSessionEnd", CharacterSessionEndEvent.class)
                 .getAnnotation(EventHandler.class);
-        assertEquals(EventPriority.LOW, handler.priority());
+        assertEquals(EventPriority.LOWEST, handler.priority());
+        SurgeryMenuManager menus = mock(SurgeryMenuManager.class);
+        PlayerMock player = readyPlayer();
+        CharacterSessionEndEvent event = new CharacterSessionEndEvent(player, characters.invalidate(player), Reason.QUIT);
+        new PlayerListener(menus).onSessionEnd(event);
+        verify(menus).handleSessionEnd(event);
     }
 
     @Test
     void listenersPreventMenuItemMovementAndRouteOnlyTopInventoryActions() {
         SurgeryMenuManager menus = mock(SurgeryMenuManager.class);
-        SurgeryRequestManager requests = new SurgeryRequestManager();
-        when(menus.getRequestManager()).thenReturn(requests);
         PlayerListener listener = new PlayerListener(menus);
-        PlayerMock player = server.addPlayer();
-        Inventory top = new SurgeryMenuHolder().getInventory();
+        PlayerMock player = readyPlayer();
+        Inventory top = new SurgeryMenuHolder(player.getUniqueId(), 1).getInventory();
         top.setItem(1, new ItemStack(Material.PAPER));
         player.openInventory(top);
         when(menus.isSurgeryMenu(top)).thenReturn(true);
@@ -235,7 +288,7 @@ class SurgeryLifecycleTest {
                 1, ClickType.LEFT, InventoryAction.PICKUP_ALL);
         listener.onInventoryClick(click);
         assertTrue(click.isCancelled());
-        verify(menus).handleItemClick(player, top.getItem(1), 1);
+        verify(menus).handleItemClick(player, top, top.getItem(1), 1);
         InventoryClickEvent bottom = new InventoryClickEvent(player.getOpenInventory(), InventoryType.SlotType.CONTAINER,
                 54, ClickType.LEFT, InventoryAction.PICKUP_ALL);
         listener.onInventoryClick(bottom);
@@ -244,27 +297,19 @@ class SurgeryLifecycleTest {
                 -999, ClickType.LEFT, InventoryAction.NOTHING);
         listener.onInventoryClick(outside);
         assertTrue(outside.isCancelled());
-        verify(menus, times(1)).handleItemClick(any(), any(), anyInt());
+        verify(menus, times(1)).handleItemClick(any(), any(), any(), anyInt());
         InventoryDragEvent drag = mock(InventoryDragEvent.class);
         when(drag.getInventory()).thenReturn(top);
         listener.onInventoryDrag(drag);
         verify(drag).setCancelled(true);
         listener.onInventoryClose(new InventoryCloseEvent(player.getOpenInventory()));
-        verify(menus).handleSurgeryAbandonment(player);
-        requests.offer(player.getUniqueId(), UUID.randomUUID(), "leg", Long.MAX_VALUE);
-        PlayerQuitEvent quit = mock(PlayerQuitEvent.class);
-        when(quit.getPlayer()).thenReturn(player);
-        listener.onPlayerQuit(quit);
-        verify(menus).handleSurgeonQuit(player);
-        verify(menus).handlePatientQuit(player);
-        assertNull(requests.pending(player.getUniqueId(), 0));
-
+        verify(menus).handleSurgeryAbandonment(player, top);
         when(menus.isSurgeryMenu(top)).thenReturn(false);
         click.setCancelled(false);
         listener.onInventoryClick(click);
         assertFalse(click.isCancelled());
         listener.onInventoryClose(new InventoryCloseEvent(player.getOpenInventory()));
-        verify(menus, times(1)).handleSurgeryAbandonment(player);
+        verify(menus, times(1)).handleSurgeryAbandonment(player, top);
         clearInvocations(drag);
         listener.onInventoryDrag(drag);
         verify(drag, never()).setCancelled(anyBoolean());
