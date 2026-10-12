@@ -303,16 +303,17 @@ class SurgeryCompletionTest {
         assertTrue(closes.isEmpty());
     }
 
-    @Test
-    void patientQuitPenalizesTheInvalidatedOutgoingBodyOnceWithoutCommands() {
+    @ParameterizedTest
+    @EnumSource(value = Reason.class, names = {"QUIT", "SWITCH"})
+    void patientLeavingPenalizesTheInvalidatedOutgoingCharacterOnceWithoutCommands(Reason reason) {
         state.setOperated(surgeonId, true);
         config.set("failure-healing-penalty", "1h");
         config.set("commands.surgery-failure", "damage %player% 1");
         CharacterSession outgoing = characters.invalidate(patient);
         assertFalse(characters.isCurrent(outgoing));
         injuries.when(() -> HealingInjuries.extend(patient, "leg", 3_600_000L)).thenReturn(7_200_000L);
-        completion.handleEnd(surgeon, outgoing, Reason.QUIT);
-        completion.handleEnd(surgeon, outgoing, Reason.QUIT);
+        completion.handleEnd(surgeon, outgoing, reason);
+        completion.handleEnd(surgeon, outgoing, reason);
         injuries.verify(() -> HealingInjuries.extend(patient, "leg", 3_600_000L));
         verifyNoCommand();
         assertFalse(state.hasSession(surgeonId));
@@ -321,8 +322,8 @@ class SurgeryCompletionTest {
     }
 
     @ParameterizedTest
-    @EnumSource(value = Reason.class, names = {"SWITCH", "DEATH", "SHUTDOWN"})
-    void otherPatientEndReasonsNeverPenalizeTheAccount(Reason reason) {
+    @EnumSource(value = Reason.class, names = {"DEATH", "SHUTDOWN"})
+    void patientDeathOrShutdownNeverPenalizesTheAccount(Reason reason) {
         state.setOperated(surgeonId, true);
         config.set("commands.surgery-failure", "damage %player% 1");
         completion.handleEnd(surgeon, characters.invalidate(patient), reason);
@@ -355,12 +356,13 @@ class SurgeryCompletionTest {
         assertTrue(closes.isEmpty());
     }
 
-    @Test
-    void outgoingPatientQuitCannotPenalizeAReplacementSession() {
+    @ParameterizedTest
+    @EnumSource(value = Reason.class, names = {"QUIT", "SWITCH"})
+    void outgoingPatientCannotPenalizeAReplacementSession(Reason reason) {
         state.setOperated(surgeonId, true);
         CharacterSession outgoing = characters.invalidate(patient);
         characters.activate(patient);
-        completion.handleEnd(surgeon, outgoing, Reason.QUIT);
+        completion.handleEnd(surgeon, outgoing, reason);
         injuries.verifyNoInteractions();
         assertFalse(state.hasSession(surgeonId));
     }

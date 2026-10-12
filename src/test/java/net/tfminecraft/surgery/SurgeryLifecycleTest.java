@@ -168,7 +168,7 @@ class SurgeryLifecycleTest {
     }
 
     @ParameterizedTest
-    @CsvSource({"patient,QUIT,true", "patient,SWITCH,false", "patient,DEATH,false", "patient,SHUTDOWN,false",
+    @CsvSource({"patient,QUIT,true", "patient,SWITCH,true", "patient,DEATH,false", "patient,SHUTDOWN,false",
             "surgeon,QUIT,true", "surgeon,SWITCH,true", "surgeon,DEATH,true", "surgeon,SHUTDOWN,false"})
     void sessionEndUsesOutgoingIdentityAndAppliesOnlyTheAllowedPenalty(String participant, Reason reason,
                                                                       boolean penalized) throws Exception {

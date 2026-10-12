@@ -133,7 +133,8 @@ public class SurgeryCompletionHandler {
         Inventory menu = surgeryMenu(surgeon, outcome);
         boolean patientEnded = ending.equals(outcome.patientSession());
         String extra = null;
-        if (outcome.operated() && (!patientEnded || reason == Reason.QUIT)) {
+        // A patient who quits or switches mid-operation pays the penalty; a permakill does not.
+        if (outcome.operated() && (!patientEnded || reason != Reason.DEATH)) {
             extra = lengthenHealing(outcome, patientEnded ? ending : null);
         }
         // Account-named commands never cross a session-end boundary.
@@ -141,11 +142,11 @@ public class SurgeryCompletionHandler {
         reportFailure(surgeon, outcome, uiUpdater.getMessage(patientEnded ? "failure-patient-left" : "failure-gave-up"), extra);
     }
 
-    private String lengthenHealing(Outcome outcome, CharacterSession quittingPatient) {
+    private String lengthenHealing(Outcome outcome, CharacterSession leavingPatient) {
         Player patient = currentPatient(outcome);
-        if (quittingPatient != null && quittingPatient.equals(outcome.patientSession())) {
-            patient = Bukkit.getPlayer(quittingPatient.ref().ownerId());
-            // During QUIT the outgoing body is still loaded, but its session is already invalid.
+        if (leavingPatient != null && leavingPatient.equals(outcome.patientSession())) {
+            patient = Bukkit.getPlayer(leavingPatient.ref().ownerId());
+            // During QUIT or SWITCH the outgoing character is still loaded, but its session is already invalid.
             if (patient == null || !patient.isOnline() || Characters.currentSession(patient).isPresent()) {
                 return null;
             }
