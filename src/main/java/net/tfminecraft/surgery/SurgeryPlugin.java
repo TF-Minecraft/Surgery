@@ -43,7 +43,19 @@ public class SurgeryPlugin extends JavaPlugin {
         getCommand("surgery").setExecutor(surgeryCommand);
         getCommand("surgery").setTabCompleter(surgeryCommand);
 
+        // The first tick runs once every plugin has enabled.
+        getServer().getScheduler().runTask(this, this::warnIfNoCharacterProvider);
+
         getLogger().info("surgery has been enabled!");
+    }
+
+    /** RPCharacters before 2.16.0 registers no TLibs character provider, so every offer would fail. */
+    void warnIfNoCharacterProvider() {
+        if (getServer().getPluginManager().isPluginEnabled("RPCharacters")
+                && !net.tfminecraft.tlibs.character.Characters.available()) {
+            getLogger().warning("RPCharacters provides no character identity, so every surgery offer will fail."
+                    + " Surgery requires RPCharacters 2.16.0 or newer.");
+        }
     }
 
     @Override

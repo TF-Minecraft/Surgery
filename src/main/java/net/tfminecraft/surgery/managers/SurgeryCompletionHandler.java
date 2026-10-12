@@ -105,7 +105,7 @@ public class SurgeryCompletionHandler {
         String extra = outcome.operated() ? lengthenHealing(outcome, null) : null;
         executeCompletionCommand(surgeon, outcome, false);
         closeMenuNextTick(surgeon, outcome, menu);
-        reportFailure(surgeon, outcome, message, extra);
+        reportFailure(surgeon, message, extra);
     }
 
     public void handleAbandonment(Player surgeon) {
@@ -139,7 +139,7 @@ public class SurgeryCompletionHandler {
         }
         // Account-named commands never cross a session-end boundary.
         closeMenuNextTick(surgeon, outcome, menu);
-        reportFailure(surgeon, outcome, uiUpdater.getMessage(patientEnded ? "failure-patient-left" : "failure-gave-up"), extra);
+        reportFailure(surgeon, uiUpdater.getMessage(patientEnded ? "failure-patient-left" : "failure-gave-up"), extra);
     }
 
     private String lengthenHealing(Outcome outcome, CharacterSession leavingPatient) {
@@ -176,8 +176,9 @@ public class SurgeryCompletionHandler {
         return extra;
     }
 
-    private void reportFailure(Player surgeon, Outcome outcome, String message, String extra) {
-        if (!isCurrent(surgeon, outcome.surgeonSession())) {
+    /** Tells the account, so a physician who switched away or was permakilled still learns the outcome. */
+    private void reportFailure(Player surgeon, String message, String extra) {
+        if (!surgeon.isOnline() || Bukkit.getPlayer(surgeon.getUniqueId()) != surgeon) {
             return;
         }
         surgeon.playSound(surgeon.getLocation(), Sound.ENTITY_WITHER_DEATH, 1.0f, 0.8f);
