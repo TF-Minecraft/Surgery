@@ -1,6 +1,5 @@
 package net.tfminecraft.surgery.managers;
 
-import net.tfminecraft.surgery.procedures.Ailments;
 import net.tfminecraft.surgery.procedures.Complication;
 import net.tfminecraft.surgery.procedures.Procedure;
 import net.tfminecraft.tlibs.objects.api.ItemAPI;
@@ -189,14 +188,11 @@ public class SurgeryMechanicsManager {
     // ==============================================
     private boolean isPatientPresent(Player surgeon) {
         UUID patientUuid = stateManager.getPatientUuid(surgeon.getUniqueId());
-        if (patientUuid == null) {
-            return true;
+        if (patientUuid == null || !stateManager.isCurrent(surgeon.getUniqueId())) {
+            return false;
         }
         Player patient = Bukkit.getPlayer(patientUuid);
         if (patient == null || !patient.isOnline() || patient.isDead()) {
-            return false;
-        }
-        if (!stateManager.isOriginalPatient(surgeon.getUniqueId(), Ailments.characterId(patient))) {
             return false;
         }
         if (!patient.getWorld().equals(surgeon.getWorld())) {

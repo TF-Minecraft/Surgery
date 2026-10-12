@@ -34,7 +34,7 @@ public class SurgeryMenuBuilder {
     // Builds and opens the surgery menu for a player
     // ==============================================
     public void buildAndOpenMenu(Player player) {
-        Inventory menu = new SurgeryMenuHolder().getInventory();
+        Inventory menu = new SurgeryMenuHolder(player.getUniqueId(), stateManager.getOperationId(player.getUniqueId())).getInventory();
         
         // Tools on the table from the start; the tincture appears after the
         // thermometer, and the dressing, smelling salts, silver wire, splint,

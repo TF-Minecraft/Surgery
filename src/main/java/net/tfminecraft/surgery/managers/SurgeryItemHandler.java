@@ -71,6 +71,12 @@ public class SurgeryItemHandler {
         }
 
         UUID playerId = player.getUniqueId();
+        if (!stateManager.isCurrent(playerId)) {
+            completionHandler.failSurgery(player, uiUpdater.getMessage("failure-patient-left",
+                    "&cThe patient is no longer on the operating table!"));
+            return;
+        }
+        long operation = stateManager.getOperationId(playerId);
 
         // Special check for scalpel - cannot be used when patient is awake
         if (tool == SurgeryTool.SCALPEL && stateManager.getStatus(playerId).equals("Awake")) {
@@ -86,7 +92,7 @@ public class SurgeryItemHandler {
 
             // Move effects may have ended the surgery (death timers, fever, bleed-out);
             // the session is cleaned up and the menu is closed, so stop here
-            if (!stateManager.hasSession(playerId)) {
+            if (stateManager.getOperationId(playerId) != operation) {
                 return;
             }
 
@@ -95,7 +101,7 @@ public class SurgeryItemHandler {
 
             // Tool handling can also end the operation (for example, chloroform
             // misuse). Completion owns the final feedback once the session ends.
-            if (!stateManager.hasSession(playerId)) {
+            if (stateManager.getOperationId(playerId) != operation) {
                 return;
             }
 
@@ -119,6 +125,7 @@ public class SurgeryItemHandler {
     private void updateMenu(Player player, SurgeryTool tool) {
         Inventory menu = player.getOpenInventory().getTopInventory();
         UUID playerId = player.getUniqueId();
+        long operation = stateManager.getOperationId(playerId);
         boolean skillFail = isSkillFail(playerId);
 
         // Consume the previous sponge's protection after this move's roll.
@@ -143,7 +150,7 @@ public class SurgeryItemHandler {
         };
 
         // Failing to use chloroform correctly can end the surgery outright
-        if (!stateManager.hasSession(playerId)) {
+        if (stateManager.getOperationId(playerId) != operation) {
             return;
         }
 

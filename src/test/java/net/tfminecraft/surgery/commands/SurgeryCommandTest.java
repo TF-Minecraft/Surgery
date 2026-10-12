@@ -3,11 +3,14 @@ package net.tfminecraft.surgery.commands;
 import net.kyori.adventure.text.Component;
 import net.tfminecraft.rpcharacters.api.HealingInjuries.HealingInjury;
 import net.tfminecraft.surgery.SurgeryPlugin;
+import net.tfminecraft.surgery.TestCharacters;
 import net.tfminecraft.surgery.managers.SurgeryMenuManager;
 import net.tfminecraft.surgery.managers.SurgeryRequestManager;
 import net.tfminecraft.surgery.managers.SurgeryStateManager;
 import net.tfminecraft.surgery.managers.SurgeryUIUpdater;
 import net.tfminecraft.surgery.procedures.Ailments;
+import net.tfminecraft.tlibs.character.CharacterSession;
+import net.tfminecraft.tlibs.character.Characters;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.World;
@@ -42,6 +45,8 @@ class SurgeryCommandTest {
     private MockedStatic<Bukkit> bukkit;
     private MockedStatic<Ailments> ailments;
     private World world;
+    private TestCharacters characters;
+    private CharacterSession surgeonSession, patientSession;
 
     @BeforeEach
     void setUp() {
@@ -49,6 +54,9 @@ class SurgeryCommandTest {
         world = server.addSimpleWorld("world");
         surgeon = player("Surgeon");
         patient = player("Patient");
+        characters = new TestCharacters();
+        surgeonSession = characters.activate(surgeon);
+        patientSession = characters.activate(patient);
         menus = mock(SurgeryMenuManager.class);
         state = new SurgeryStateManager();
         requests = new SurgeryRequestManager();
@@ -77,6 +85,7 @@ class SurgeryCommandTest {
     void tearDown() {
         ailments.close();
         bukkit.close();
+        characters.close();
         MockBukkit.unmock();
     }
 
@@ -101,7 +110,8 @@ class SurgeryCommandTest {
     }
 
     private void offerRequest() {
-        requests.offer(patient.getUniqueId(), surgeon.getUniqueId(), "leg", Long.MAX_VALUE);
+        requests.offer(Characters.currentSession(patient).orElse(null),
+                Characters.currentSession(surgeon).orElse(null), "leg", Long.MAX_VALUE);
     }
 
     @Test
@@ -159,12 +169,29 @@ class SurgeryCommandTest {
         assertSame(old, requests.pending(patient.getUniqueId(), 0));
     }
 
+    @ParameterizedTest
+    @ValueSource(strings = {"surgeon", "patient", "provider"})
+    void offersRequireBothReadyCharactersBeforeLookingUpInjuries(String unavailable) {
+        switch (unavailable) {
+            case "surgeon" -> characters.invalidate(surgeon);
+            case "patient" -> characters.invalidate(patient);
+            default -> characters.unregister();
+        }
+        run(surgeon, "Patient");
+        message(surgeon, "command-character-required");
+        ailments.verifyNoInteractions();
+        assertNull(requests.pending(patient.getUniqueId(), 0));
+        verify(menus, never()).openSurgeryMenu(any(), any(), any());
+    }
+
     @Test
     void offersStripFormattingDescribePenaltyAndProvideConsentButtons() {
         long before = System.currentTimeMillis();
         run(surgeon, "Patient");
         var request = requests.pending(patient.getUniqueId(), before);
         assertEquals(surgeon.getUniqueId(), request.surgeonId());
+        assertEquals(surgeonSession, request.surgeonSession());
+        assertEquals(patientSession, request.patientSession());
         assertEquals("leg", request.traitId());
         assertTrue(request.expiresAt() >= before + 60_000);
         ArgumentCaptor<String> messages = ArgumentCaptor.forClass(String.class);
@@ -227,6 +254,48 @@ class SurgeryCommandTest {
         message(surgeon, "request-accepted-surgeon");
         message(patient, "request-accepted-patient");
         assertNull(requests.pending(patient.getUniqueId(), 0));
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"surgeon-switch-back", "patient-switch-back", "surgeon-reconnect",
+            "patient-reconnect", "surgeon-pending", "patient-pending", "provider"})
+    void acceptingRejectsConsentFromEitherPreviousCharacterSession(String changed) {
+        run(surgeon, "Patient");
+        assertNotNull(requests.pending(patient.getUniqueId(), 0));
+        ailments.clearInvocations();
+        if (changed.equals("provider")) {
+            characters.unregister();
+        } else {
+            Player participant = changed.startsWith("surgeon") ? surgeon : patient;
+            CharacterSession original = participant == surgeon ? surgeonSession : patientSession;
+            characters.invalidate(participant);
+            if (changed.endsWith("switch-back")) {
+                characters.activate(participant);
+                characters.activate(participant, original.ref().characterId());
+            } else if (changed.endsWith("reconnect")) {
+                characters.activate(participant, original.ref().characterId());
+            }
+        }
+        run(patient, "accept");
+        message(patient, "request-none");
+        ailments.verifyNoInteractions();
+        verify(menus, never()).openSurgeryMenu(any(), any(), any());
+        assertNull(requests.pending(patient.getUniqueId(), 0));
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"surgeon", "patient"})
+    void acceptanceRechecksCapturedSessionsAfterResolvingTheSurgeon(String changed) {
+        offerRequest();
+        bukkit.when(() -> Bukkit.getPlayer(surgeon.getUniqueId())).thenAnswer(call -> {
+            characters.invalidate(changed.equals("surgeon") ? surgeon : patient);
+            return surgeon;
+        });
+        run(patient, "accept");
+        message(surgeon, "command-character-required");
+        message(patient, "request-cannot-start");
+        ailments.verifyNoInteractions();
+        verify(menus, never()).openSurgeryMenu(any(), any(), any());
     }
 
     @Test

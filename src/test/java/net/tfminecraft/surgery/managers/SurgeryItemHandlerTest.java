@@ -30,6 +30,7 @@ import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
 class SurgeryItemHandlerTest {
+    private net.tfminecraft.surgery.TestCharacters identities;
     private final UUID id = UUID.fromString("00000000-0000-0000-0000-000000000001");
     private YamlConfiguration config;
     private SurgeryStateManager state;
@@ -45,6 +46,7 @@ class SurgeryItemHandlerTest {
     @BeforeEach
     void setUp() {
         ServerMock server = MockBukkit.mock();
+        identities = new net.tfminecraft.surgery.TestCharacters();
         config = new YamlConfiguration();
         config.set("skill-fail.base-chance", 0.0);
         config.set("skill-fail.bleeding-chance", 0.0);
@@ -58,6 +60,7 @@ class SurgeryItemHandlerTest {
         state.setAilment(id, "trait", "Ailment", new Procedure("Procedure", 2, 1, 1, Set.of()));
         ui = mock(SurgeryUIUpdater.class);
         when(ui.getMessage(anyString())).thenAnswer(call -> call.getArgument(0));
+        when(ui.getMessage(anyString(), anyString())).thenAnswer(call -> call.getArgument(0));
         when(ui.getMessageList(anyString())).thenAnswer(call -> List.of(call.getArgument(0, String.class)));
         when(ui.createInfoBlock(any(), anyString(), anyString())).thenReturn(new ItemStack(Material.PAPER));
         mechanics = mock(SurgeryMechanicsManager.class);
@@ -72,6 +75,10 @@ class SurgeryItemHandlerTest {
         inventory = mock(PlayerInventory.class);
         InventoryView view = mock(InventoryView.class);
         when(player.getUniqueId()).thenReturn(id);
+        Player patient = mock(Player.class);
+        when(patient.getUniqueId()).thenReturn(UUID.randomUUID());
+        state.setSurgeonSession(id, identities.activate(player));
+        state.setPatientSession(id, identities.activate(patient));
         when(player.getInventory()).thenReturn(inventory);
         when(player.getOpenInventory()).thenReturn(view);
         when(player.getLocation()).thenReturn(new Location(server.addSimpleWorld("world"), 0, 64, 0));
@@ -83,7 +90,20 @@ class SurgeryItemHandlerTest {
 
     @AfterEach
     void tearDown() {
+        identities.close();
         MockBukkit.unmock();
+    }
+
+    @Test
+    void staleSessionCannotConsumeToolsOrCreateMoreOperationState() {
+        var original = state.getSurgeonSession(id);
+        identities.activate(player, original.ref().characterId());
+        ItemStack stock = new ItemStack(Material.PAPER, 2);
+        when(inventory.getItem(0)).thenReturn(stock);
+        handler.handleItemClick(player, stock, SurgeryTool.SCALPEL.getSlot());
+        assertEquals(2, stock.getAmount());
+        verify(completion).failSurgery(eq(player), anyString());
+        verifyNoInteractions(mechanics);
     }
 
     private void click(SurgeryTool tool) {
@@ -311,6 +331,22 @@ class SurgeryItemHandlerTest {
         assertEquals("Unconscious", state.getStatus(id));
         assertEquals(0, state.getUnconsciousTimer(id));
         verifyNoInteractions(completion);
+    }
+
+    @Test
+    void chloroformFailureCannotWriteIntoAnOperationStartedByItsCompletionCommand() {
+        state.setUnconsciousTimer(id, 1);
+        long original = state.getOperationId(id);
+        doAnswer(call -> {
+            state.cleanup(id);
+            state.setSkillFail(id, "Replacement state");
+            return null;
+        }).when(completion).failSurgery(player, "failure-anesthetic-misuse");
+        click(SurgeryTool.CHLOROFORM);
+        assertNotEquals(original, state.getOperationId(id));
+        assertEquals("Replacement state", state.getSkillFail(id));
+        verify(ui, never()).createInfoBlock(any(), anyString(), anyString());
+        verify(completion, never()).handleSuccess(any());
     }
 
     @Test

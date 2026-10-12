@@ -1,6 +1,7 @@
 package net.tfminecraft.surgery.managers;
 
-import net.tfminecraft.surgery.procedures.Ailments;
+import net.tfminecraft.surgery.TestCharacters;
+import net.tfminecraft.tlibs.character.CharacterSession;
 import net.tfminecraft.surgery.procedures.Complication;
 import net.tfminecraft.surgery.procedures.Procedure;
 import net.tfminecraft.tlibs.objects.api.ItemAPI;
@@ -17,6 +18,8 @@ import org.bukkit.plugin.java.JavaPlugin;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.MockedStatic;
 import org.mockbukkit.mockbukkit.MockBukkit;
 import org.mockbukkit.mockbukkit.ServerMock;
@@ -39,6 +42,9 @@ class SurgeryMechanicsManagerTest {
     private Player player;
     private Inventory menu;
     private World world;
+    private Player patient;
+    private TestCharacters characters;
+    private MockedStatic<Bukkit> bukkit;
 
     @BeforeEach
     void setUp() {
@@ -64,15 +70,31 @@ class SurgeryMechanicsManagerTest {
         player = mock(Player.class);
         InventoryView view = mock(InventoryView.class);
         when(player.getUniqueId()).thenReturn(id);
+        when(player.isOnline()).thenReturn(true);
         when(player.getOpenInventory()).thenReturn(view);
         when(player.getWorld()).thenReturn(world);
         when(player.getLocation()).thenReturn(new Location(world, 0, 64, 0));
         when(view.getTopInventory()).thenReturn(menu);
+        patient = mock(Player.class);
+        UUID patientId = UUID.randomUUID();
+        when(patient.getUniqueId()).thenReturn(patientId);
+        when(patient.isOnline()).thenReturn(true);
+        when(patient.getWorld()).thenReturn(world);
+        when(patient.getLocation()).thenReturn(new Location(world, 1, 64, 0));
+        characters = new TestCharacters();
+        state.setSurgeonSession(id, characters.activate(player));
+        state.setPatientSession(id, characters.activate(patient));
+        state.setPatientUuid(id, patientId);
+        bukkit = mockStatic(Bukkit.class, CALLS_REAL_METHODS);
+        bukkit.when(() -> Bukkit.getPlayer(patientId)).thenReturn(patient);
+        bukkit.when(() -> Bukkit.getPlayer(id)).thenReturn(player);
         mechanics = new SurgeryMechanicsManager(plugin, api, state, ui, completion, items);
     }
 
     @AfterEach
     void tearDown() {
+        bukkit.close();
+        characters.close();
         MockBukkit.unmock();
     }
 
@@ -220,68 +242,55 @@ class SurgeryMechanicsManagerTest {
 
     @Test
     void patientMustRemainOnlineInTheSameWorldAndInsideConfiguredRange() {
-        UUID patientId = UUID.fromString("00000000-0000-0000-0000-000000000003");
-        state.setPatientUuid(id, patientId);
-        Player patient = mock(Player.class);
-        try (MockedStatic<Bukkit> bukkit = mockStatic(Bukkit.class)) {
-            move();
-            verify(completion).failSurgery(player, "failure-patient-left");
-            assertEquals(0, state.getMoveCount(id));
-            clearInvocations(completion);
-            bukkit.when(() -> Bukkit.getPlayer(patientId)).thenReturn(patient);
-            move();
-            verify(completion).failSurgery(player, "failure-patient-left");
-            clearInvocations(completion);
-            when(patient.isOnline()).thenReturn(true);
-            when(patient.getWorld()).thenReturn(mock(World.class));
-            move();
-            verify(completion).failSurgery(player, "failure-patient-left");
-            clearInvocations(completion);
-            when(patient.getWorld()).thenReturn(world);
-            when(patient.getLocation()).thenReturn(new Location(world, 10, 64, 0));
-            move();
-            assertEquals(1, state.getMoveCount(id));
-            verifyNoInteractions(completion);
-            when(patient.getLocation()).thenReturn(new Location(world, 10.01, 64, 0));
-            move();
-            verify(completion).failSurgery(player, "failure-patient-left");
-        }
+        UUID patientId = patient.getUniqueId();
+        bukkit.when(() -> Bukkit.getPlayer(patientId)).thenReturn(null);
+        move();
+        verify(completion).failSurgery(player, "failure-patient-left");
+        assertEquals(0, state.getMoveCount(id));
+        clearInvocations(completion);
+        bukkit.when(() -> Bukkit.getPlayer(patientId)).thenReturn(patient);
+        when(patient.isOnline()).thenReturn(false);
+        move();
+        verify(completion).failSurgery(player, "failure-patient-left");
+        clearInvocations(completion);
+        when(patient.isOnline()).thenReturn(true);
+        when(patient.getWorld()).thenReturn(mock(World.class));
+        move();
+        verify(completion).failSurgery(player, "failure-patient-left");
+        clearInvocations(completion);
+        when(patient.getWorld()).thenReturn(world);
+        when(patient.getLocation()).thenReturn(new Location(world, 10, 64, 0));
+        move();
+        assertEquals(1, state.getMoveCount(id));
+        verifyNoInteractions(completion);
+        when(patient.getLocation()).thenReturn(new Location(world, 10.01, 64, 0));
+        move();
+        verify(completion).failSurgery(player, "failure-patient-left");
     }
 
-    @Test
-    void deadOrSwitchedPatientIsNotOnTheTable() {
-        UUID patientId = UUID.fromString("00000000-0000-0000-0000-000000000004");
-        state.setPatientUuid(id, patientId);
-        state.setPatientCharacterId(id, "patient");
-        Player patient = mock(Player.class);
-        when(patient.isOnline()).thenReturn(true);
-        when(patient.getWorld()).thenReturn(world);
-        when(patient.getLocation()).thenReturn(new Location(world, 1, 64, 0));
-        try (MockedStatic<Bukkit> bukkit = mockStatic(Bukkit.class);
-             MockedStatic<Ailments> ailments = mockStatic(Ailments.class)) {
-            bukkit.when(() -> Bukkit.getPlayer(patientId)).thenReturn(patient);
-            ailments.when(() -> Ailments.characterId(patient)).thenReturn("patient");
-            move();
-            assertEquals(1, state.getMoveCount(id));
-            verifyNoInteractions(completion);
-
-            when(patient.isDead()).thenReturn(true);
-            move();
-            verify(completion).failSurgery(player, "failure-patient-left");
-            clearInvocations(completion);
-
-            when(patient.isDead()).thenReturn(false);
-            ailments.when(() -> Ailments.characterId(patient)).thenReturn(null);
-            move();
-            verify(completion).failSurgery(player, "failure-patient-left");
-            clearInvocations(completion);
-
-            ailments.when(() -> Ailments.characterId(patient)).thenReturn("patient");
-            state.markPatientChanged(id);
-            move();
-            verify(completion).failSurgery(player, "failure-patient-left");
-            assertEquals(1, state.getMoveCount(id));
+    @ParameterizedTest
+    @ValueSource(strings = {"dead", "patient-switch-back", "surgeon-switch-back", "patient-pending",
+            "surgeon-pending", "provider-lost", "missing-patient-owner"})
+    void treatmentCannotContinueAfterEitherParticipantSessionChanges(String change) {
+        move();
+        assertEquals(1, state.getMoveCount(id));
+        verifyNoInteractions(completion);
+        switch (change) {
+            case "dead" -> when(patient.isDead()).thenReturn(true);
+            case "provider-lost" -> characters.unregister();
+            case "missing-patient-owner" -> state.setPatientUuid(id, null);
+            default -> {
+                Player participant = change.startsWith("patient") ? patient : player;
+                CharacterSession original = characters.invalidate(participant);
+                if (change.endsWith("switch-back")) {
+                    characters.activate(participant);
+                    characters.activate(participant, original.ref().characterId());
+                }
+            }
         }
+        move();
+        verify(completion).failSurgery(player, "failure-patient-left");
+        assertEquals(1, state.getMoveCount(id));
     }
 
     @Test

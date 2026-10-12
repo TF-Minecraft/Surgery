@@ -1,26 +1,27 @@
 package net.tfminecraft.surgery.managers;
 
+import java.util.UUID;
 import org.bukkit.Bukkit;
+import org.bukkit.entity.Player;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.InventoryHolder;
 
-// ==============================================
-// Marker holder for the surgery menu inventory
-// Lets listeners identify the menu by holder type instead of matching the
-// title string, which any other inventory could share
-// ==============================================
+/** Identifies one operation, so an old close or click cannot reach a replacement menu. */
 public class SurgeryMenuHolder implements InventoryHolder {
-
     private final Inventory inventory;
+    private final UUID surgeonId;
+    private final long operationId;
 
-    // Keep the existing legacy text representation, formatting, and exact-string comparisons.
     @SuppressWarnings("deprecation")
-    public SurgeryMenuHolder() {
+    public SurgeryMenuHolder(UUID surgeonId, long operationId) {
+        this.surgeonId = surgeonId;
+        this.operationId = operationId;
         this.inventory = Bukkit.createInventory(this, 54, "Surgery Menu");
     }
 
-    @Override
-    public Inventory getInventory() {
-        return inventory;
+    public boolean matches(Player player, long currentOperation) {
+        return operationId != 0 && operationId == currentOperation && surgeonId.equals(player.getUniqueId());
     }
+
+    @Override public Inventory getInventory() { return inventory; }
 }
