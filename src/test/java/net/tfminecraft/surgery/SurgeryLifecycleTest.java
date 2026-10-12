@@ -144,6 +144,28 @@ class SurgeryLifecycleTest {
     }
 
     @Test
+    void warnsAfterStartupOnlyWhenEnabledRPCharactersProvidesNoIdentity() {
+        SurgeryPlugin plugin = MockBukkit.load(SurgeryPlugin.class);
+        java.util.List<String> warnings = new java.util.ArrayList<>();
+        plugin.getLogger().addHandler(new java.util.logging.Handler() {
+            @Override public void publish(java.util.logging.LogRecord record) {
+                if (record.getLevel() == java.util.logging.Level.WARNING) warnings.add(record.getMessage());
+            }
+            @Override public void flush() {}
+            @Override public void close() {}
+        });
+        server.getScheduler().performOneTick();
+        assertTrue(warnings.isEmpty());
+        characters.unregister();
+        plugin.warnIfNoCharacterProvider();
+        assertEquals(1, warnings.size());
+        assertTrue(warnings.getFirst().contains("RPCharacters 2.16.0 or newer"));
+        server.getPluginManager().disablePlugin(server.getPluginManager().getPlugin("RPCharacters"));
+        plugin.warnIfNoCharacterProvider();
+        assertEquals(1, warnings.size());
+    }
+
+    @Test
     void missingSharedItemApiDisablesPluginBeforeCommandRegistration() {
         tlibs.when(TLibs::getItemAPI).thenReturn(null);
         SurgeryPlugin plugin = MockBukkit.load(SurgeryPlugin.class);
@@ -168,7 +190,7 @@ class SurgeryLifecycleTest {
     }
 
     @ParameterizedTest
-    @CsvSource({"patient,QUIT,true", "patient,SWITCH,false", "patient,DEATH,false", "patient,SHUTDOWN,false",
+    @CsvSource({"patient,QUIT,true", "patient,SWITCH,true", "patient,DEATH,false", "patient,SHUTDOWN,false",
             "surgeon,QUIT,true", "surgeon,SWITCH,true", "surgeon,DEATH,true", "surgeon,SHUTDOWN,false"})
     void sessionEndUsesOutgoingIdentityAndAppliesOnlyTheAllowedPenalty(String participant, Reason reason,
                                                                       boolean penalized) throws Exception {
