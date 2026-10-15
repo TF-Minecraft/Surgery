@@ -252,6 +252,9 @@ class SurgeryCommandTest {
         assertTrue(command.onTabComplete(surgeon, bukkitCommand, "surgery", new String[]{"PA"}).isEmpty());
         when(surgeon.hasPermission(anyString())).thenReturn(false);
         assertEquals(List.of("accept", "deny"), command.onTabComplete(surgeon, bukkitCommand, "surgery", new String[]{""}));
-        assertEquals(List.of("accept"), command.onTabComplete(mock(CommandSender.class), bukkitCommand, "surgery", new String[]{"A"}));
+        assertEquals(List.of("accept"), command.onTabComplete(surgeon, bukkitCommand, "surgery", new String[]{"A"}));
+        assertTrue(command.onTabComplete(mock(CommandSender.class), bukkitCommand, "surgery", new String[]{""}).isEmpty());
+        assertTrue(command.onTabComplete(mock(CommandSender.class), bukkitCommand, "surgery", new String[]{"A"}).isEmpty());
+        assertTrue(command.onTabComplete(mock(CommandSender.class), bukkitCommand, "surgery", new String[]{"deny"}).isEmpty());
     }
 }

@@ -207,6 +207,9 @@ public class SurgeryCommand implements TabExecutor {
 
     @Override
     public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
+        if (!(sender instanceof Player player)) {
+            return List.of();
+        }
         List<String> options = new ArrayList<>();
         if (args.length != 1) {
             return options;
@@ -217,7 +220,7 @@ public class SurgeryCommand implements TabExecutor {
                 options.add(sub);
             }
         }
-        if (sender instanceof Player player && canOperate(player)) {
+        if (canOperate(player)) {
             for (Player online : Bukkit.getOnlinePlayers()) {
                 if (!online.equals(player) && player.canSee(online)
                         && online.getName().toLowerCase(Locale.ROOT).startsWith(prefix)) {
