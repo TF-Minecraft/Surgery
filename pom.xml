@@ -68,6 +68,12 @@
             <scope>test</scope>
         </dependency>
         <dependency>
+            <groupId>org.junit.platform</groupId>
+            <artifactId>junit-platform-launcher</artifactId>
+            <version>1.14.0</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
             <groupId>org.mockbukkit.mockbukkit</groupId>
             <artifactId>mockbukkit-v1.21</artifactId>
             <version>4.95.0</version>
@@ -113,7 +119,7 @@
                 <artifactId>maven-surefire-plugin</artifactId>
                 <version>3.5.4</version>
                 <configuration>
-                    <argLine>@{argLine} -javaagent:${org.mockito:mockito-core:jar} -Xshare:off</argLine>
+                    <argLine>@{argLine} -javaagent:${org.mockito:mockito-core:jar} -javaagent:${net.bytebuddy:byte-buddy-agent:jar} -Xshare:off</argLine>
                     <failIfNoTests>true</failIfNoTests>
                 </configuration>
             </plugin>

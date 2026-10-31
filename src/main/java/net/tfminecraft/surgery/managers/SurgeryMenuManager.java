@@ -89,7 +89,7 @@ public class SurgeryMenuManager {
     // Checks if an inventory is the surgery menu (by holder, not title)
     // ==============================================
     public boolean isSurgeryMenu(org.bukkit.inventory.Inventory inventory) {
-        return inventory != null && inventory.getHolder() instanceof SurgeryMenuHolder;
+        return inventory != null && inventory.getHolder(false) instanceof SurgeryMenuHolder;
     }
 
     // ==============================================
@@ -103,7 +103,7 @@ public class SurgeryMenuManager {
     }
 
     private boolean ownsMenu(Player player, Inventory inventory) {
-        return inventory.getHolder() instanceof SurgeryMenuHolder holder
+        return inventory.getHolder(false) instanceof SurgeryMenuHolder holder
                 && holder.matches(player, stateManager.getOperationId(player.getUniqueId()));
     }
 
