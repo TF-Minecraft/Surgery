@@ -119,7 +119,7 @@
                 <artifactId>maven-surefire-plugin</artifactId>
                 <version>3.5.4</version>
                 <configuration>
-                    <argLine>@{argLine} -javaagent:${org.mockito:mockito-core:jar} -Xshare:off</argLine>
+                    <argLine>@{argLine} -javaagent:${org.mockito:mockito-core:jar} -javaagent:${net.bytebuddy:byte-buddy-agent:jar} -Xshare:off</argLine>
                     <failIfNoTests>true</failIfNoTests>
                 </configuration>
             </plugin>
