@@ -72,7 +72,7 @@ public class SurgeryPlugin extends JavaPlugin {
         // a new classloader, so the instanceof check in the listener no longer
         // matches and players could pull items out of stale menus
         for (Player player : getServer().getOnlinePlayers()) {
-            if (player.getOpenInventory().getTopInventory().getHolder() instanceof SurgeryMenuHolder) {
+            if (player.getOpenInventory().getTopInventory().getHolder(false) instanceof SurgeryMenuHolder) {
                 player.closeInventory();
             }
         }

@@ -191,7 +191,7 @@ public class SurgeryCompletionHandler {
 
     private Inventory surgeryMenu(Player surgeon, Outcome outcome) {
         Inventory menu = surgeon.getOpenInventory().getTopInventory();
-        return menu.getHolder() instanceof SurgeryMenuHolder holder && holder.matches(surgeon, outcome.operationId())
+        return menu.getHolder(false) instanceof SurgeryMenuHolder holder && holder.matches(surgeon, outcome.operationId())
                 ? menu : null;
     }
 
