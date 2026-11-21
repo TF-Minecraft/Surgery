@@ -314,6 +314,19 @@ class SurgeryMechanicsManagerTest {
     }
 
     @Test
+    void dressedWoundNoLongerHaemorrhages() {
+        procedure(2, 0, 0, Complication.HAEMORRHAGE);
+        config.set("complications.haemorrhage.bleeding-interval-min", 1);
+        config.set("complications.haemorrhage.bleeding-interval-max", 1);
+        state.setExamined(id, true);
+        state.setCured(id, true);
+        move();
+        move();
+        assertFalse(state.isBleeding(id));
+        verify(ui, never()).sendNumberedMessage(player, "haemorrhage");
+    }
+
+    @Test
     void haemorrhageDoesNotStartBeforeMinimumInterval() {
         procedure(2, 0, 0, Complication.HAEMORRHAGE);
         state.setExamined(id, true);

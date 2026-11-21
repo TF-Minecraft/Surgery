@@ -117,8 +117,8 @@ anesthetic:
 
 complications:
   haemorrhage:
-    bleeding-interval-min: 3             # Forces bleeding every 3-4 moves since the last sponge
-    bleeding-interval-max: 4
+    bleeding-interval-min: 6             # Forces bleeding every 6-8 moves since the last sponge
+    bleeding-interval-max: 8             # or forceps, until the wound is dressed
   shock:
     collapse-chance: 0.20                # Chance per move to collapse while unconscious
   sepsis:

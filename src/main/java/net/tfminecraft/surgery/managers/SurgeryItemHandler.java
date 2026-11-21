@@ -157,6 +157,8 @@ public class SurgeryItemHandler {
         if (stateManager.isBleeding(playerId)) {
             uiUpdater.sendNumberedMessage(player, uiUpdater.getMessage("bleeding-warning"));
         }
+        // Bleeding has no block of its own; the incisions block shows it
+        uiUpdater.updateIncisionBlock(menu, playerId, stateManager.getIncisions(playerId));
 
         // ==============================================
         // Update skill fail block
@@ -455,6 +457,8 @@ public class SurgeryItemHandler {
         }
         if (stateManager.getIncisions(playerId) > 0 && stateManager.isBleeding(playerId)) {
             stateManager.setBleeding(playerId, false);
+            // Clamping holds a haemorrhage back as long as a sponge would
+            stateManager.setMovesSinceLastSponge(playerId, 0);
             mechanicsManager.updateDynamicTools(player, menu, playerId);
         }
         return "";
@@ -474,7 +478,8 @@ public class SurgeryItemHandler {
         // Don't show incomplete message if surgery is already successful
         if (!completionHandler.isSurgerySuccessful(playerId)) {
             uiUpdater.sendNumberedMessage(player, uiUpdater.getMessage("condition-treated-incomplete"));
-            uiUpdater.sendNumberedMessage(player, uiUpdater.getMessage("check-remaining"));
+            uiUpdater.sendNumberedMessage(player, uiUpdater.getMessage("remaining-steps", "&eStill to do: %steps%")
+                .replace("%steps%", String.join(", ", completionHandler.remainingSteps(playerId))));
         }
         return "";
     }

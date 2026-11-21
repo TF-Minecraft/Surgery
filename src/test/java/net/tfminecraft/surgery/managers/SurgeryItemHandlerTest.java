@@ -268,7 +268,8 @@ class SurgeryItemHandlerTest {
         assertEquals(1, state.getIncisions(id));
         assertEquals("Unclean", state.getOperationSite(id));
         assertEquals("Steady", state.getPulse(id));
-        verify(ui).updateIncisionBlock(menu, id, 1);
+        // Once by the scalpel, once by the end-of-move bleeding refresh
+        verify(ui, times(2)).updateIncisionBlock(menu, id, 1);
         verify(mechanics).handleBoneReveal(player, menu, id, 1);
         verify(mechanics).updateDynamicTools(player, menu, id);
         verify(mechanics).checkForDressing(player, menu, id, 1);
@@ -406,8 +407,11 @@ class SurgeryItemHandlerTest {
         click(SurgeryTool.ARTERY_FORCEPS);
         assertTrue(state.isBleeding(id));
         state.setIncisions(id, 1);
+        state.setMovesSinceLastSponge(id, 5);
         click(SurgeryTool.ARTERY_FORCEPS);
         assertFalse(state.isBleeding(id));
+        // Clamping restarts the haemorrhage interval like a sponge
+        assertEquals(0, state.getMovesSinceLastSponge(id));
         click(SurgeryTool.ARTERY_FORCEPS);
         verify(mechanics, times(1)).updateDynamicTools(player, menu, id);
     }
@@ -419,7 +423,7 @@ class SurgeryItemHandlerTest {
         assertTrue(state.isCured(id));
         assertNull(menu.getItem(SurgeryTool.DRESSING.getSlot()));
         verify(ui).sendNumberedMessage(player, "condition-treated-incomplete");
-        verify(ui).sendNumberedMessage(player, "check-remaining");
+        verify(ui).sendNumberedMessage(player, "remaining-steps");
         verify(completion, never()).handleSuccess(player);
         when(completion.isSurgerySuccessful(id)).thenReturn(true);
         click(SurgeryTool.DRESSING);
