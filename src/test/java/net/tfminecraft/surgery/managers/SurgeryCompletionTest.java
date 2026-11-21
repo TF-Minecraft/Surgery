@@ -148,6 +148,26 @@ class SurgeryCompletionTest {
     }
 
     @Test
+    void remainingStepsListEveryUnmetConditionInMenuOrder() {
+        state.setStatus(surgeonId, "Unconscious");
+        state.setOperationSite(surgeonId, "Clean");
+        assertEquals(List.of(), completion.remainingSteps(surgeonId));
+        state.setBrokenBones(surgeonId, 1);
+        state.setPulse(surgeonId, "Weak");
+        state.setStatus(surgeonId, "Coming to");
+        state.setTemperature(surgeonId, 101);
+        state.setOperationSite(surgeonId, "Unclean");
+        state.setIncisions(surgeonId, 2);
+        state.setBleeding(surgeonId, true);
+        assertEquals(List.of("set the bones", "strengthen the pulse", "keep the patient under",
+            "bring the fever down", "clean the operation site", "close the incisions", "stop the bleeding"),
+            completion.remainingSteps(surgeonId));
+        state.setBrokenBones(surgeonId, 0);
+        state.setShatteredBones(surgeonId, 1);
+        assertEquals("set the bones", completion.remainingSteps(surgeonId).get(0));
+    }
+
+    @Test
     void successfulCureRunsRewardOnceAndClosesOnNextTick() {
         injuries.when(() -> HealingInjuries.cure(patient, "leg")).thenReturn(true);
         config.set("commands.surgery-success", "reward %surgeon% %player% %ailment%");

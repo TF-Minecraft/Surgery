@@ -78,9 +78,15 @@ public class SurgeryUIUpdater {
     // Keep the existing legacy text representation, formatting, and exact-string comparisons.
     @SuppressWarnings("deprecation")
     public void updateIncisionBlock(Inventory menu, UUID playerId, int incisions) {
-        Material incisionColor = SurgeryConstants.getIncisionColor(incisions);
-        ItemStack incisionBlock = createInfoBlock(incisionColor, ChatColor.GOLD + "Incisions", ChatColor.GRAY + String.valueOf(incisions));
-        menu.setItem(SurgeryConstants.SLOT_INCISIONS, incisionBlock);
+        // A bleeding patient turns the block red, since bleeding blocks success too
+        boolean bleeding = stateManager.isBleeding(playerId);
+        Material incisionColor = bleeding ? Material.RED_CONCRETE : SurgeryConstants.getIncisionColor(incisions);
+        java.util.List<String> lore = new java.util.ArrayList<>();
+        lore.add(ChatColor.GRAY + String.valueOf(incisions));
+        if (bleeding) {
+            lore.add(getMessage("incisions-bleeding", "&cThe patient is bleeding"));
+        }
+        menu.setItem(SurgeryConstants.SLOT_INCISIONS, createInfoBlock(incisionColor, ChatColor.GOLD + "Incisions", lore));
     }
     
     // ==============================================
@@ -145,7 +151,9 @@ public class SurgeryUIUpdater {
             lore.add(ChatColor.GRAY + "Complaint: " + ChatColor.WHITE + ailment);
             lore.add(ChatColor.GRAY + "Examine the patient with the stethoscope.");
         } else {
-            color = stateManager.isCured(playerId) ? Material.LIME_CONCRETE : Material.YELLOW_CONCRETE;
+            // Stays yellow after the dressing: success closes the menu, so green
+            // here only ever meant "dressed" and read as "done"
+            color = Material.YELLOW_CONCRETE;
             lore.add(ChatColor.GRAY + "The patient suffers from " + ChatColor.WHITE + procedure.name());
             lore.add(ChatColor.GRAY + "Ailment: " + ChatColor.WHITE + ailment);
             lore.add(ChatColor.GRAY + "Incisions needed: " + ChatColor.WHITE + procedure.requiredIncisions());
@@ -155,6 +163,7 @@ public class SurgeryUIUpdater {
             }
             if (stateManager.isCured(playerId)) {
                 lore.add(ChatColor.GREEN + "Treated and dressed");
+                lore.add(ChatColor.YELLOW + "Finish the surgery to close it");
             }
         }
 

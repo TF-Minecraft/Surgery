@@ -59,7 +59,8 @@ temperature-reduced: "&aThe tincture brings the fever down."
 operation-clean: "&aCarbolic acid has cleaned the site. The fever will not rise."
 vision-cleared: "&aVision cleared! Your next move will be steadier."
 condition-treated-incomplete: "&eThe ailment is dressed, but the surgery is not yet complete."
-check-remaining: "&eCheck: bones, incisions, bleeding, temperature, status"
+remaining-steps: "&eStill to do: %steps%"
+incisions-bleeding: "&cThe patient is bleeding"
 dressing-ready: "&aThe injury is set - apply the linen dressing!"
 
 # Discovery Messages

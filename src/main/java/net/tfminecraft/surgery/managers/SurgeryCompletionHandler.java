@@ -12,6 +12,8 @@ import org.bukkit.entity.Player;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.plugin.java.JavaPlugin;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 
 // ==============================================
@@ -37,32 +39,39 @@ public class SurgeryCompletionHandler {
     // Checks if all success conditions are met
     // ==============================================
     public boolean isSurgerySuccessful(UUID playerId) {
-        // 1. The ailment has been treated and dressed
-        if (!stateManager.isCured(playerId)) { return false; }
+        // The ailment has been treated and dressed, and nothing else is left to do
+        return stateManager.isCured(playerId) && remainingSteps(playerId).isEmpty();
+    }
 
-        // 2. Pulse must be "Strong" (LIME)
-        if (!stateManager.getPulse(playerId).equals("Strong")) { return false; }
-
-        // 3. Status must be "Unconscious" (LIME)
-        if (!stateManager.getStatus(playerId).equals("Unconscious")) { return false; }
-
-        // 4. Temperature must be at or below the configured success threshold (LIME)
+    // ==============================================
+    // What still stands between the surgeon and success, besides the dressing,
+    // in the order the menu shows it
+    // ==============================================
+    public List<String> remainingSteps(UUID playerId) {
+        List<String> steps = new ArrayList<>();
+        if (stateManager.getBrokenBones(playerId) != 0 || stateManager.getShatteredBones(playerId) != 0) {
+            steps.add("set the bones");
+        }
+        if (!stateManager.getPulse(playerId).equals("Strong")) {
+            steps.add("strengthen the pulse");
+        }
+        if (!stateManager.getStatus(playerId).equals("Unconscious")) {
+            steps.add("keep the patient under");
+        }
         double successThreshold = plugin.getConfig().getDouble("temperature.success-threshold", 100.0);
-        if (stateManager.getTemperature(playerId) > successThreshold) { return false; }
-
-        // 5. Operation site must be "Clean" (LIME)
-        if (!stateManager.getOperationSite(playerId).equals("Clean")) { return false; }
-
-        // 6. Incisions must be 0 (LIME)
-        if (stateManager.getIncisions(playerId) != 0) { return false; }
-
-        // 7. All bones must be set
-        if (stateManager.getBrokenBones(playerId) != 0 || stateManager.getShatteredBones(playerId) != 0) { return false; }
-
-        // 8. No bleeding
-        if (stateManager.isBleeding(playerId)) { return false; }
-
-        return true;
+        if (stateManager.getTemperature(playerId) > successThreshold) {
+            steps.add("bring the fever down");
+        }
+        if (!stateManager.getOperationSite(playerId).equals("Clean")) {
+            steps.add("clean the operation site");
+        }
+        if (stateManager.getIncisions(playerId) != 0) {
+            steps.add("close the incisions");
+        }
+        if (stateManager.isBleeding(playerId)) {
+            steps.add("stop the bleeding");
+        }
+        return steps;
     }
 
     public void handleSuccess(Player surgeon) {
