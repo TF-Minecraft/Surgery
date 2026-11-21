@@ -165,6 +165,8 @@ class SurgeryCompletionTest {
         state.setBrokenBones(surgeonId, 0);
         state.setShatteredBones(surgeonId, 1);
         assertEquals("set the bones", completion.remainingSteps(surgeonId).get(0));
+        state.setStatus(surgeonId, "Collapsed");
+        assertTrue(completion.remainingSteps(surgeonId).contains("revive the patient"));
     }
 
     @Test

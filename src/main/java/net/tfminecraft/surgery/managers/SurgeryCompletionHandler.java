@@ -55,8 +55,9 @@ public class SurgeryCompletionHandler {
         if (!stateManager.getPulse(playerId).equals("Strong")) {
             steps.add("strengthen the pulse");
         }
-        if (!stateManager.getStatus(playerId).equals("Unconscious")) {
-            steps.add("keep the patient under");
+        String status = stateManager.getStatus(playerId);
+        if (!status.equals("Unconscious")) {
+            steps.add(status.equals("Collapsed") ? "revive the patient" : "keep the patient under");
         }
         double successThreshold = plugin.getConfig().getDouble("temperature.success-threshold", 100.0);
         if (stateManager.getTemperature(playerId) > successThreshold) {

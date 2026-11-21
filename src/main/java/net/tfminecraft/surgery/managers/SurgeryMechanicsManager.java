@@ -211,8 +211,8 @@ public class SurgeryMechanicsManager {
         if (procedure.has(Complication.HAEMORRHAGE) && !stateManager.isCured(playerId)) {
             // Forces bleeding somewhere between min and max moves since the last
             // sponge or forceps: 50/50 each move once min is reached, guaranteed at max
-            int min = plugin.getConfig().getInt("complications.haemorrhage.bleeding-interval-min", 3);
-            int max = plugin.getConfig().getInt("complications.haemorrhage.bleeding-interval-max", 4);
+            int min = plugin.getConfig().getInt("complications.haemorrhage.bleeding-interval-min", 6);
+            int max = plugin.getConfig().getInt("complications.haemorrhage.bleeding-interval-max", 8);
             int movesSinceSponge = stateManager.getMovesSinceLastSponge(playerId);
             if (movesSinceSponge >= max || (movesSinceSponge >= min && ThreadLocalRandom.current().nextBoolean())) {
                 stateManager.setBleeding(playerId, true);
